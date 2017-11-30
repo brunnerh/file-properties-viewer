@@ -1,0 +1,81 @@
+{
+    "name": "file-properties-viewer",
+    "displayName": "File Properties Viewer",
+    "description": "Shows file properties like size and last time modified.",
+    "version": "0.1.0",
+    "publisher": "brunnerh",
+    "license": "MIT",
+    "homepage": "https://github.com/brunnerh/file-properties-viewer",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/brunnerh/file-properties-viewer.git"
+    },
+    "engines": {
+        "vscode": "^1.18.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:filePropertiesViewer.viewProperties"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "commands": [
+            {
+                "command": "filePropertiesViewer.viewProperties",
+                "title": "View File Properties"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "File Properties Viewer Configuration",
+            "properties": {
+                "filePropertiesViewer.dateTimeFormat": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "Sets a custom date/time format. See https://www.npmjs.com/package/dateformat#mask-options for the available mask options. If null the default locale string conversion is used."
+                }
+            }
+        },
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "filePropertiesViewer.viewProperties"
+                }
+            ],
+            "editor/title/context": [
+                {
+                    "command": "filePropertiesViewer.viewProperties"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "filePropertiesViewer.viewProperties"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "@types/dateformat": "^1.0.1",
+        "@types/mocha": "^2.2.42",
+        "@types/node": "^7.0.43",
+        "@types/pretty-bytes": "^4.0.0",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6"
+    },
+    "dependencies": {
+        "dateformat": "^3.0.2",
+        "pretty-bytes": "^4.0.2"
+    }
+}
