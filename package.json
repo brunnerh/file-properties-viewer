@@ -2,9 +2,10 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size and last time modified.",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "publisher": "brunnerh",
     "license": "MIT",
+    "icon": "icon/icon.png",
     "homepage": "https://github.com/brunnerh/file-properties-viewer",
     "repository": {
         "type": "git",
