@@ -17,6 +17,9 @@
     "categories": [
         "Other"
     ],
+    "keywords": [
+        "file", "properties", "size", "modification date", "access date", "creation date"
+    ],
     "activationEvents": [
         "onCommand:filePropertiesViewer.viewProperties"
     ],
