@@ -21,9 +21,12 @@
         "file",
         "properties",
         "size",
+        "date",
+        "media info",
+        "mime",
+        "creation date",
         "modification date",
-        "access date",
-        "creation date"
+        "access date"
     ],
     "activationEvents": [
         "onCommand:filePropertiesViewer.viewProperties"
