@@ -1,6 +1,6 @@
 # File Properties Viewer
 
-This is an extension for [Visual Studio Code](https://code.visualstudio.com/) which adds a command and related context menu entries for displaying file system properties of a given files. It shows file size and timestamps like the creation date.
+This is an extension for [Visual Studio Code](https://code.visualstudio.com/) which adds a command and related context menu entries for displaying file system properties of a given file. It shows file size and timestamps like the creation date.
 
 ## Features
 
