@@ -5,7 +5,9 @@ const prettyBytes: (size: number) => string = require("pretty-bytes");
 import { promisify } from "./util";
 import * as dateformat from "dateformat";
 import { Config } from "./config-interface";
-import { ThemeColor } from "vscode";
+import { execFile } from "child_process";
+import { parseString as parseXML } from "xml2js";
+import { MediaInfoContainer } from "./media-info";
 
 const filePropertiesScheme = 'file-properties-view';
 
@@ -33,7 +35,7 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 			this._onDidChange.fire(uri);
 	}
 
-	async provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken)
+	async provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken)
 	{
 		const path = uri.path;
 		const name = basename(path);
@@ -50,6 +52,83 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 
 		// Byte size redundant for sizes < 1000;
 		const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
+
+		const exec = (path: string, args: string[]) => new Promise<string>((res, rej) =>
+		{
+			execFile(path, args, (error, stdout, stderr) =>
+			{
+				if (error)
+					rej({ error, stderr });
+				else
+					res(stdout);
+			});
+		});
+
+		const rows: TableRow[] = [
+			new PropertyRow('Name', name),
+			new PropertyRow('Directory', directory),
+			new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
+			new PropertyRow('Created', formatDate(stats.birthtime)),
+			new PropertyRow('Changed', formatDate(stats.ctime)),
+			new PropertyRow('Modified', formatDate(stats.mtime)),
+			new PropertyRow('Accessed', formatDate(stats.atime)),
+		];
+
+		// MIME Info
+		if (Config.section.get("queryMIME"))
+			try
+			{
+				const mime = (await exec('xdg-mime', ['query', 'filetype', path])).trim();
+				rows.push(new PropertyRow('MIME Type', mime));
+			}
+			catch { }
+
+		// Media Info
+		if (Config.section.get("queryMediaInfo"))
+			try
+			{
+				const mediaXml = await exec('mediainfo', ['--Output=xml', '--Output=XML', path]);
+				rows.push(new GroupRow("Media Info"));
+				const mediaContainer = <MediaInfoContainer>await promisify(parseXML)(mediaXml);
+				const tracks = mediaContainer.MediaInfo.media[0].track;
+
+				const rowTree = (parentLabel: string, obj: any, level = 0) =>
+				{
+					rows.push(new SubGroupRow(parentLabel, level));
+					Object.keys(obj)
+						.filter(key => key != "$")
+						.forEach(key =>
+						{
+							if (obj[key])
+							{
+								const label = key.replace(/_/g, ' ');
+								let value = (obj[key] as any)[0];
+
+								// If object, Base64 encoded or sub-tree
+								if (typeof value == 'object')
+								{
+									if (value.$ && value.$.dt == 'binary.base64')
+									{
+										value = Buffer.from(value._, 'base64').toString();
+									}
+									else
+									{
+										rowTree(label, value, level + 1);
+										return;
+									}
+								}
+
+								rows.push(new PropertyRow(label, value, level + 1));
+							}
+						});
+				}
+
+				tracks.forEach(track =>
+				{
+					rowTree(track.$.type, track);
+				});
+			}
+			catch { }
 
 		return `
 			<style>
@@ -99,6 +178,23 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 				{
 				  border-bottom-right-radius: 10px;
 				}
+
+				.center-text
+				{
+					text-align: center;
+				}
+				td.indent-1
+				{
+					padding-left: 20px;
+				}
+				td.indent-2
+				{
+					padding-left: 40px;
+				}
+				td.indent-3
+				{
+					padding-left: 60px;
+				}
 			</style>
 			<table>
 				<thead>
@@ -108,53 +204,74 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 					</tr>
 				</thead>
 				<tbody>
-					<tr>
-						<td>Name:</td>
-						<td>${name}</td>
-					</tr>
-					<tr>
-						<td>Directory:</td>
-						<td>${directory}</td>
-					</tr>
-					<tr>
-						<td>Size:</td>
-						<td>${prettyBytes(stats.size)}${exactSize}</td>
-					</tr>
-					<tr>
-						<td>Created:</td>
-						<td>${formatDate(stats.birthtime)}</td>
-					</tr>
-					<tr>
-						<td>Changed:</td>
-						<td>${formatDate(stats.ctime)}</td>
-					</tr>
-					<tr>
-						<td>Modified:</td>
-						<td>${formatDate(stats.mtime)}</td>
-					</tr>
-					<tr>
-						<td>Accessed:</td>
-						<td>${formatDate(stats.atime)}</td>
-					</tr>
+					${rows.map(r => r.toHTML()).join("\n")}
 				</tbody>
 			</table>
 		`
 	}
 }
 
+abstract class TableRow
+{
+	abstract toHTML(): string;
+}
+class PropertyRow extends TableRow
+{
+	constructor(public key: string, public value: any, private indent = 0)
+	{
+		super();
+	}
+
+	toHTML()
+	{
+		return `<tr>
+			<td class="indent-${this.indent}">${this.key}:</td>
+			<td>${this.value}</td>
+		</tr>`
+	}
+}
+class GroupRow extends TableRow
+{
+	constructor(public label: string)
+	{
+		super();
+	}
+
+	toHTML()
+	{
+		return `<tr><th colspan="2" class="center-text">${this.label}</th></tr>`;
+	}
+}
+
+class SubGroupRow extends TableRow
+{
+	constructor(public label: string, private indent = 0)
+	{
+		super();
+	}
+
+	toHTML()
+	{
+		return `<tr>
+			<td colspan="2" class="indent-${this.indent}">${this.label}</td>
+		</tr>`;
+	}
+}
+
 export function registerFilePropertiesViewer()
 {
 	const provider = new PropertiesViewProvider();
-	const token1 = vscode.workspace.registerTextDocumentContentProvider(filePropertiesScheme, provider);
+	const tokens = [
+		vscode.workspace.registerTextDocumentContentProvider(filePropertiesScheme, provider),
+		vscode.workspace.onDidSaveTextDocument(e =>
+		{
+			provider.update(filePropertiesUri(e.uri.fsPath));
+		}),
+		vscode.workspace.onDidChangeConfiguration(() =>
+		{
+			provider.update();
+		})
+	];
 
-	const token2 = vscode.workspace.onDidSaveTextDocument(e =>
-	{
-		provider.update(filePropertiesUri(e.uri.fsPath));
-	});
-	const token3 = vscode.workspace.onDidChangeConfiguration(e =>
-	{
-		provider.update();
-	});
-
-	return vscode.Disposable.from(token1, token2, token3);
+	return vscode.Disposable.from(...tokens);
 }

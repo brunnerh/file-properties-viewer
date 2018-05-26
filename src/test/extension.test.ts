@@ -9,13 +9,9 @@ import * as assert from 'assert';
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
-import * as myExtension from '../extension';
 import * as path from "path";
-import * as fs from "fs";
-import * as os from "os";
 import { viewProperties } from '../command-names';
 import { PropertiesViewProvider } from '../properties-view-provider';
-import { Config } from '../config-interface';
 
 suite("Extension Tests", () =>
 {

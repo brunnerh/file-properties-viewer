@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext)
 			viewerUri,
 			vscode.ViewColumn.Two,
 			`Properties of ${name}`
-		).then(success => { }, reason => vscode.window.showErrorMessage(reason));
+		).then(undefined, reason => vscode.window.showErrorMessage(reason));
 	});
 
 	context.subscriptions.push(commandToken);

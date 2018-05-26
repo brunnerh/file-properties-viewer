@@ -2,7 +2,7 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size and last time modified.",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "publisher": "brunnerh",
     "license": "MIT",
     "icon": "icon/icon.png",
@@ -18,7 +18,12 @@
         "Other"
     ],
     "keywords": [
-        "file", "properties", "size", "modification date", "access date", "creation date"
+        "file",
+        "properties",
+        "size",
+        "modification date",
+        "access date",
+        "creation date"
     ],
     "activationEvents": [
         "onCommand:filePropertiesViewer.viewProperties"
@@ -42,6 +47,16 @@
                     ],
                     "default": null,
                     "description": "Sets a custom date/time format. See https://www.npmjs.com/package/dateformat#mask-options for the available mask options. If null the default locale string conversion is used."
+                },
+                "filePropertiesViewer.queryMediaInfo": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether media information via mediainfo should be requested."
+                },
+                "filePropertiesViewer.queryMIME": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether MIME information via xdg-mime should be requested."
                 }
             }
         },
@@ -72,14 +87,16 @@
     },
     "devDependencies": {
         "@types/dateformat": "^1.0.1",
-        "@types/mocha": "^2.2.42",
-        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.48",
+        "@types/node": "^7.0.65",
         "@types/pretty-bytes": "^4.0.0",
+        "@types/xml2js": "^0.4.2",
         "typescript": "^2.6.1",
         "vscode": "^1.1.6"
     },
     "dependencies": {
-        "dateformat": "^3.0.2",
-        "pretty-bytes": "^4.0.2"
+        "dateformat": "^3.0.3",
+        "pretty-bytes": "^4.0.2",
+        "xml2js": "^0.4.19"
     }
 }
