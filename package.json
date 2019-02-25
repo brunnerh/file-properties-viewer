@@ -95,7 +95,7 @@
         "@types/pretty-bytes": "^4.0.0",
         "@types/xml2js": "^0.4.2",
         "typescript": "^2.6.1",
-        "vscode": "^1.1.6"
+        "vscode": "^1.1.30"
     },
     "dependencies": {
         "dateformat": "^3.0.3",

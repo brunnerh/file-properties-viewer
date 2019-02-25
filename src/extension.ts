@@ -30,10 +30,7 @@ export function activate(context: vscode.ExtensionContext)
 	});
 
 	context.subscriptions.push(commandToken);
-
-
 	context.subscriptions.push(registerFilePropertiesViewer());
-
 }
 
 // this method is called when your extension is deactivated
