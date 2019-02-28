@@ -29,9 +29,9 @@ This extension contributes the following settings:
 
 ### MediaInfo
 
-1. Download the **CLI** for the respective architecture from the [Windows download section](https://mediaarea.net/en/MediaInfo/Download/Windows):
+1. Download the **CLI** for the respective architecture from the [Windows download section](https://mediaarea.net/en/MediaInfo/Download/Windows):<br/>
    ![MediaInfo download options](./readme-files/mediainfo-download.png)
-2. Extract the archive to a directory and copy its location from the address bar of the explorer. The directory should contain the `MediaInfo.exe` application:
+2. Extract the archive to a directory and copy its location from the address bar of the explorer. The directory should contain the `MediaInfo.exe` application:<br/>
    ![Getting the MediaInfo path](./readme-files/mediainfo-get-path.png)
 3. Add the copied location to the `PATH` environment variable. (See [respective subsection](#adding-directories-to-the-path-environment-variable).)
 
@@ -47,8 +47,11 @@ The `PATH` variable is used by the operating system to resolve names of executab
 
 Depending on the version of Windows this process can differ. Search online if this outline is not helpful to you; there exist guides for all versions (and other languages).
 
-1. Search for "environment variables" from the start menu. There should be an option to change those for the current user.
-2. In the list of variables for your user find the one called `Path` (casing does not matter). Create it if it does not exist, click "Edit" otherwise.
-3. Click the "New" button to add a new directory path to the variable. Paste or type the directory location you want to add.
+1. Search for "environment variables" from the start menu. There should be an option to change those for the current user.<br/>
+   ![Control panel option for environment variables](readme-files/path-env-settings.png)
+2. In the list of variables for your user find the one called `Path` (casing does not matter). Create it if it does not exist, click "Edit" otherwise.<br/>
+   ![Environment variables dialog](readme-files/path-env-dialog.png)
+3. Click the "New" button to add a new directory path to the variable. Paste or type the directory location you want to add.<br/>
+   ![Path edit dialog](readme-files/path-env-edit-path.png)
 4. "OK" all the dialogs.
 5. Restart VS Code to have it load the updated variable.
