@@ -19,11 +19,25 @@ If the applications are available in the `PATH`, they will be called unless they
 
 ## Extension Settings
 
-This extension contributes the following settings:
+This extension has the following settings:
 
 - `filePropertiesViewer.dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `filePropertiesViewer.queryMediaInfo`: Whether media information via mediainfo should be requested.
 - `filePropertiesViewer.queryMIME`: Whether MIME information via xdg-mime should be requested.
+- `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.<br/>
+    The default style can be found [here](./styles/default.css).<br/>
+    The following classes are used within the table:
+    - `copy-button`: Used on the copy button. Has an `svg` as immediate child.
+    - `column-header-row`: The very top row.
+      - `column-header-cell`: Cells in top row.
+    - `property-row`: Row with property and value.
+      - `key-cell`: Cell in property column.
+      - `value-cell`: Cell of value column.
+      - `indent-<n>`: Defined on property cell, number `<n>` increases for nested property rows.
+    - `group-row`: Top level group row (e.g. `Media Info`).
+      - `group-cell`: Cell of group row (spans both columns).
+    - `sub-group-row`: Second level group row (e.g. `Media Info` > `Image`)
+      - `sub-group-cell`: Cell of sub-group row (spans both columns).
 
 ## Installing Utility Applications on Windows
 
@@ -48,10 +62,10 @@ The `PATH` variable is used by the operating system to resolve names of executab
 Depending on the version of Windows this process can differ. Search online if this outline is not helpful to you; there exist guides for all versions (and other languages).
 
 1. Search for "environment variables" from the start menu. There should be an option to change those for the current user.<br/>
-   ![Control panel option for environment variables](readme-files/path-env-settings.png)
+   ![Control panel option for environment variables](./readme-files/path-env-settings.png)
 2. In the list of variables for your user find the one called `Path` (casing does not matter). Create it if it does not exist, click "Edit" otherwise.<br/>
-   ![Environment variables dialog](readme-files/path-env-dialog.png)
+   ![Environment variables dialog](./readme-files/path-env-dialog.png)
 3. Click the "New" button to add a new directory path to the variable. Paste or type the directory location you want to add.<br/>
-   ![Path edit dialog](readme-files/path-env-edit-path.png)
+   ![Path edit dialog](./readme-files/path-env-edit-path.png)
 4. "OK" all the dialogs.
 5. Restart VS Code to have it load the updated variable.

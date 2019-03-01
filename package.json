@@ -2,7 +2,7 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size and last time modified.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "publisher": "brunnerh",
     "license": "MIT",
     "icon": "icon/icon.png",
@@ -60,6 +60,14 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Whether MIME information via xdg-mime should be requested."
+                },
+                "filePropertiesViewer.outputStylePath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "Sets a path to a CSS file used for styling the output table. See extension page for more info."
                 }
             }
         },
@@ -86,7 +94,8 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+        "test": "npm run compile && node ./node_modules/vscode/bin/test",
+        "minify:images": "pushd images; ./minify.sh; popd"
     },
     "devDependencies": {
         "@types/dateformat": "^1.0.1",
@@ -94,7 +103,8 @@
         "@types/node": "^7.0.65",
         "@types/pretty-bytes": "^4.0.0",
         "@types/xml2js": "^0.4.2",
-        "typescript": "^2.6.1",
+        "svgo": "^1.2.0",
+        "typescript": "^3.3.3333",
         "vscode": "^1.1.30"
     },
     "dependencies": {

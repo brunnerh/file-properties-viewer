@@ -1,0 +1,74 @@
+:root
+{
+	--border: 1px solid currentColor;
+}
+
+table
+{
+	border-spacing: 0;
+}
+th
+{
+	font-size: bigger;
+	font-weight: bolder;
+}
+th, td
+{
+	padding: 8px;
+	border-top: var(--border);
+}
+tr:last-child th,
+tr:last-child td
+{
+	border-bottom: var(--border);
+}
+
+.column-header-cell
+{
+	text-align: left;
+	border-top: none;
+}
+.group-row
+{
+	text-align: center;
+}
+.sub-group-row
+{
+	font-variant: small-caps;
+}
+
+td.indent-1
+{
+	padding-left: 20px;
+}
+td.indent-2
+{
+	padding-left: 40px;
+}
+td.indent-3
+{
+	padding-left: 60px;
+}
+
+.copy-button
+{
+	color: inherit;
+	border: 1px solid transparent;
+	background: none;
+	margin-left: 10px;
+	float: right;
+	cursor: pointer;
+	transition: border ease-in-out 0.3s;
+}
+.copy-button:hover,
+.copy-button:focus
+{
+	border-color: currentColor;
+}
+.copy-button > svg
+{
+	display: inline-block;
+	vertical-align: middle;
+	height: 1em;
+	width: 1em;
+}

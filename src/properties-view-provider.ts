@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
-import { basename, dirname } from "path";
+import { basename, dirname, join } from "path";
 const prettyBytes: (size: number) => string = require("pretty-bytes");
 import { promisify } from "./util";
 import * as dateformat from "dateformat";
@@ -8,6 +8,8 @@ import { Config } from "./config-interface";
 import { execFile } from "child_process";
 import { parseString as parseXML } from "xml2js";
 import { MediaInfoContainer } from "./media-info";
+import { html, HtmlString, raw } from "./html";
+import { icons } from "./icons";
 
 const filePropertiesScheme = 'file-properties-view';
 
@@ -64,9 +66,23 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 			});
 		});
 
+		const copyIcon = await icons.copy;
+
+		const copyButton = (text: string) => html`
+			<button class="copy-button"
+					onclick="navigator.clipboard.writeText(${JSON.stringify(text)})">
+				${raw(copyIcon)}
+			</button>
+		`;
+
+		const fileLink = (path: string) => html`
+			<a href="file://${path}">${path}</a>
+		`;
+
 		const rows: TableRow[] = [
-			new PropertyRow('Name', name),
-			new PropertyRow('Directory', directory),
+			new PropertyRow('Name', [name, copyButton(name)]),
+			new PropertyRow('Directory', [directory, copyButton(directory)]),
+			new PropertyRow('Full Path', [fileLink(path), copyButton(path)]),
 			new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
 			new PropertyRow('Created', formatDate(stats.birthtime)),
 			new PropertyRow('Changed', formatDate(stats.ctime)),
@@ -130,90 +146,33 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 			}
 			catch { }
 
-		return `
-			<style>
-				table
-				{
-					border-spacing: 0;
-				}
-				th
-				{
-					font-size: bigger;
-					font-weight: bolder;
-				}
-				th, td
-				{
-					padding: 8px;
-					border: 1px solid currentColor;
-					border-bottom-width: 0;
-					border-right-width: 0;
-				}
-				th:last-child, td:last-child
-				{
-					border-right-width: 1px;
-				}
-				tbody tr:last-child td,
-				tbody tr:last-child th
-				{
-					border-bottom-width: 1px;
-				}
-				
-				thead tr:first-child td:first-child,
-				thead tr:first-child th:first-child
-				{
-				  border-top-left-radius: 10px;
-				}
-				thead tr:first-child td:last-child,
-				thead tr:first-child th:last-child
-				{
-				  border-top-right-radius: 10px;
-				}
-				tbody tr:last-child td:first-child,
-				tbody tr:last-child th:first-child
-				{
-				  border-bottom-left-radius: 10px;
-				}
-				tbody tr:last-child td:last-child,
-				tbody tr:last-child th:last-child
-				{
-				  border-bottom-right-radius: 10px;
-				}
+		const defaultStylePath = join(__dirname, '../styles/default.css');
+		const stylePath = Config.section.get("outputStylePath");
+		const style = (await promisify<Buffer>(fs.readFile)(stylePath ? stylePath : defaultStylePath))
+						.toString();
 
-				.center-text
-				{
-					text-align: center;
-				}
-				td.indent-1
-				{
-					padding-left: 20px;
-				}
-				td.indent-2
-				{
-					padding-left: 40px;
-				}
-				td.indent-3
-				{
-					padding-left: 60px;
-				}
+		return html`
+			<style>
+				${raw(style)}
 			</style>
 			<table>
 				<thead>
-					<tr>
-						<th>Property</th>
-						<th>Value</th>
+					<tr class="column-header-row">
+						<th class="column-header-cell">Property</th>
+						<th class="column-header-cell">Value</th>
 					</tr>
 				</thead>
 				<tbody>
-					${rows.map(r => r.toHTML()).join("\n")}
+					${rows.map(r => r.toHTML())}
 				</tbody>
 			</table>
-		`
+		`.content;
 	}
 }
 
 abstract class TableRow
 {
-	abstract toHTML(): string;
+	abstract toHTML(): HtmlString;
 }
 class PropertyRow extends TableRow
 {
@@ -224,9 +183,9 @@ class PropertyRow extends TableRow
 
 	toHTML()
 	{
-		return `<tr>
-			<td class="indent-${this.indent}">${this.key}:</td>
-			<td>${this.value}</td>
+		return html`<tr class="property-row">
+			<td class="indent-${this.indent}" class="key-cell">${this.key}</td>
+			<td class="value-cell">${this.value}</td>
 		</tr>`
 	}
 }
@@ -239,7 +198,9 @@ class GroupRow extends TableRow
 
 	toHTML()
 	{
-		return `<tr><th colspan="2" class="center-text">${this.label}</th></tr>`;
+		return html`<tr class="group-row">
+			<th colspan="2" class="group-cell">${this.label}</th>
+		</tr>`;
 	}
 }
 
@@ -252,8 +213,8 @@ class SubGroupRow extends TableRow
 
 	toHTML()
 	{
-		return `<tr>
-			<td colspan="2" class="indent-${this.indent}">${this.label}</td>
+		return html`<tr class="sub-group-row">
+			<td colspan="2" class="indent-${this.indent} sub-group-cell">${this.label}</td>
 		</tr>`;
 	}
 }

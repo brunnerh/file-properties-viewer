@@ -6,7 +6,7 @@ import { viewProperties } from './command-names';
 
 export function activate(context: vscode.ExtensionContext)
 {
-	let commandToken = vscode.commands.registerCommand(viewProperties, (uri?: vscode.Uri) =>
+	const commandToken = vscode.commands.registerCommand(viewProperties, (uri?: vscode.Uri) =>
 	{
 		if (uri == null && vscode.window.activeTextEditor == null ||
 			uri != null && uri.scheme != 'file')
@@ -33,7 +33,6 @@ export function activate(context: vscode.ExtensionContext)
 	context.subscriptions.push(registerFilePropertiesViewer());
 }
 
-// this method is called when your extension is deactivated
 export function deactivate()
 {
 }
