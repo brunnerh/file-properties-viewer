@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.1] - 2019-03-18
+
+- Switch from deprecated `vscode.previewHtml` command to webview API. (This change should not have any noticeable effect.)
+
 ## [0.3.0] - 2019-03-01
 
 - Added:
