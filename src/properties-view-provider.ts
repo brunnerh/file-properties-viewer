@@ -11,150 +11,162 @@ import { MediaInfoContainer } from "./media-info";
 import { html, HtmlString, raw } from "./html";
 import { icons } from "./icons";
 
-const filePropertiesScheme = 'file-properties-view';
-
-/**
- * Creates a properties view URI.
- * @param uriFsPath The path to the file to inspect, should be provided by the {@link vscode.Uri.fsPath}.
- */
-export const filePropertiesUri = (uriFsPath: string) => vscode.Uri.parse(`${filePropertiesScheme}:${uriFsPath}`);
-
-export class PropertiesViewProvider implements vscode.TextDocumentContentProvider
+export async function provideViewHtml(uri: vscode.Uri)
 {
-	private readonly _onDidChange = new vscode.EventEmitter<vscode.Uri>();
-	get onDidChange(): vscode.Event<vscode.Uri> { return this._onDidChange.event; }
+	const path = uri.path;
+	const name = basename(path);
+	const directory = dirname(path);
+	const stats = await promisify<fs.Stats>(fs.stat)(path);
 
-	/**
-	 * Update the properties viewer by firing the change event.
-	 * If no URI is provided all known windows are updated.
-	 */
-	update(uri?: vscode.Uri)
+	const formatDate = (date: Date) =>
 	{
-		if (uri == null)
-			vscode.workspace.textDocuments.forEach(e =>
-				this._onDidChange.fire(filePropertiesUri(e.uri.fsPath)));
-		else
-			this._onDidChange.fire(uri);
+		// Extract and only update on config changed event if performance is impacted.
+		const format = Config.section.get("dateTimeFormat");
+
+		return format == null ? date.toLocaleString() : dateformat(date, format);
 	}
 
-	async provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken)
+	// Byte size redundant for sizes < 1000;
+	const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
+
+	const exec = (path: string, args: string[]) => new Promise<string>((res, rej) =>
 	{
-		const path = uri.path;
-		const name = basename(path);
-		const directory = dirname(path);
-		const stats = await promisify<fs.Stats>(fs.stat)(path);
-
-		const formatDate = (date: Date) =>
+		execFile(path, args, (error, stdout, stderr) =>
 		{
-			// Extract and only update on config changed event if performance is impacted.
-			const format = Config.section.get("dateTimeFormat");
-
-			return format == null ? date.toLocaleString() : dateformat(date, format);
-		}
-
-		// Byte size redundant for sizes < 1000;
-		const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
-
-		const exec = (path: string, args: string[]) => new Promise<string>((res, rej) =>
-		{
-			execFile(path, args, (error, stdout, stderr) =>
-			{
-				if (error)
-					rej({ error, stderr });
-				else
-					res(stdout);
-			});
+			if (error)
+				rej({ error, stderr });
+			else
+				res(stdout);
 		});
+	});
 
-		const copyIcon = await icons.copy;
+	const copyIcon = await icons.copy;
 
-		const copyButton = (text: string) => html`
-			<button class="copy-button"
-					onclick="navigator.clipboard.writeText(${JSON.stringify(text)})">
-				${raw(copyIcon)}
-			</button>
-		`;
+	const copyButton = (text: string) => html`
+		<button class="copy-button" onclick="copyTextToClipboard(${JSON.stringify(text)})">
+			${raw(copyIcon)}
+		</button>
+	`;
 
-		const fileLink = (path: string) => html`
-			<a href="file://${path}">${path}</a>
-		`;
+	const fileLink = (path: string) => html`
+		<a href="file://${path}" onclick="openFile(${JSON.stringify(path)})">${path}</a>
+	`;
 
-		const rows: TableRow[] = [
-			new PropertyRow('Name', [name, copyButton(name)]),
-			new PropertyRow('Directory', [directory, copyButton(directory)]),
-			new PropertyRow('Full Path', [fileLink(path), copyButton(path)]),
-			new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
-			new PropertyRow('Created', formatDate(stats.birthtime)),
-			new PropertyRow('Changed', formatDate(stats.ctime)),
-			new PropertyRow('Modified', formatDate(stats.mtime)),
-			new PropertyRow('Accessed', formatDate(stats.atime)),
-		];
+	const rows: TableRow[] = [
+		new PropertyRow('Name', [name, copyButton(name)]),
+		new PropertyRow('Directory', [directory, copyButton(directory)]),
+		new PropertyRow('Full Path', [fileLink(path), copyButton(path)]),
+		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
+		new PropertyRow('Created', formatDate(stats.birthtime)),
+		new PropertyRow('Changed', formatDate(stats.ctime)),
+		new PropertyRow('Modified', formatDate(stats.mtime)),
+		new PropertyRow('Accessed', formatDate(stats.atime)),
+	];
 
-		// MIME Info
-		if (Config.section.get("queryMIME"))
-			try
+	// MIME Info
+	if (Config.section.get("queryMIME"))
+		try
+		{
+			const mime = (await exec('xdg-mime', ['query', 'filetype', path])).trim();
+			rows.push(new PropertyRow('MIME Type', mime));
+		}
+		catch { }
+
+	// Media Info
+	if (Config.section.get("queryMediaInfo"))
+		try
+		{
+			const mediaXml = await exec('mediainfo', ['--Output=xml', '--Output=XML', path]);
+			rows.push(new GroupRow("Media Info"));
+			const mediaContainer = <MediaInfoContainer>await promisify(parseXML)(mediaXml);
+			const tracks = mediaContainer.MediaInfo.media[0].track;
+
+			const rowTree = (parentLabel: string, obj: any, level = 0) =>
 			{
-				const mime = (await exec('xdg-mime', ['query', 'filetype', path])).trim();
-				rows.push(new PropertyRow('MIME Type', mime));
-			}
-			catch { }
-
-		// Media Info
-		if (Config.section.get("queryMediaInfo"))
-			try
-			{
-				const mediaXml = await exec('mediainfo', ['--Output=xml', '--Output=XML', path]);
-				rows.push(new GroupRow("Media Info"));
-				const mediaContainer = <MediaInfoContainer>await promisify(parseXML)(mediaXml);
-				const tracks = mediaContainer.MediaInfo.media[0].track;
-
-				const rowTree = (parentLabel: string, obj: any, level = 0) =>
-				{
-					rows.push(new SubGroupRow(parentLabel, level));
-					Object.keys(obj)
-						.filter(key => key != "$")
-						.forEach(key =>
+				rows.push(new SubGroupRow(parentLabel, level));
+				Object.keys(obj)
+					.filter(key => key != "$")
+					.forEach(key =>
+					{
+						if (obj[key])
 						{
-							if (obj[key])
+							const label = key.replace(/_/g, ' ');
+							let value = (obj[key] as any)[0];
+
+							// If object, Base64 encoded or sub-tree
+							if (typeof value == 'object')
 							{
-								const label = key.replace(/_/g, ' ');
-								let value = (obj[key] as any)[0];
-
-								// If object, Base64 encoded or sub-tree
-								if (typeof value == 'object')
+								if (value.$ && value.$.dt == 'binary.base64')
 								{
-									if (value.$ && value.$.dt == 'binary.base64')
-									{
-										value = Buffer.from(value._, 'base64').toString();
-									}
-									else
-									{
-										rowTree(label, value, level + 1);
-										return;
-									}
+									value = Buffer.from(value._, 'base64').toString();
 								}
-
-								rows.push(new PropertyRow(label, value, level + 1));
+								else
+								{
+									rowTree(label, value, level + 1);
+									return;
+								}
 							}
-						});
-				}
 
-				tracks.forEach(track =>
-				{
-					rowTree(track.$.type, track);
-				});
+							rows.push(new PropertyRow(label, value, level + 1));
+						}
+					});
 			}
-			catch { }
 
-		const defaultStylePath = join(__dirname, '../styles/default.css');
-		const stylePath = Config.section.get("outputStylePath");
-		const style = (await promisify<Buffer>(fs.readFile)(stylePath ? stylePath : defaultStylePath))
-						.toString();
+			tracks.forEach(track =>
+			{
+				rowTree(track.$.type, track);
+			});
+		}
+		catch { }
 
-		return html`
+	const defaultStylePath = join(__dirname, '../styles/default.css');
+	const stylePath = Config.section.get("outputStylePath");
+	const style = (await promisify<Buffer>(fs.readFile)(stylePath ? stylePath : defaultStylePath))
+		.toString();
+
+	return html`
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>Document</title>
 			<style>
 				${raw(style)}
 			</style>
+			<script>
+			(() =>
+			{
+				const vscode = acquireVsCodeApi();
+
+				function copyTextToClipboard(text)
+				{
+					var textArea = document.createElement("textarea");
+					textArea.value = text;
+
+					document.body.appendChild(textArea);
+					textArea.select();
+
+					try
+					{
+						document.execCommand('copy');
+					}
+					finally
+					{
+						textArea.remove();
+					}
+				}
+
+				function openFile(path)
+				{
+					vscode.postMessage({ command: 'open', path });
+				}
+
+				Object.assign(window, { copyTextToClipboard, openFile });
+			})();
+			</script>
+		</head>
+		<body>
 			<table>
 				<thead>
 					<tr class="column-header-row">
@@ -166,8 +178,9 @@ export class PropertiesViewProvider implements vscode.TextDocumentContentProvide
 					${rows.map(r => r.toHTML())}
 				</tbody>
 			</table>
-		`.content;
-	}
+		</body>
+		</html>
+	`.content;
 }
 
 abstract class TableRow
@@ -219,20 +232,68 @@ class SubGroupRow extends TableRow
 	}
 }
 
-export function registerFilePropertiesViewer()
+export async function viewPropertiesCommand(uri?: vscode.Uri)
 {
-	const provider = new PropertiesViewProvider();
-	const tokens = [
-		vscode.workspace.registerTextDocumentContentProvider(filePropertiesScheme, provider),
-		vscode.workspace.onDidSaveTextDocument(e =>
+	if (uri == null && vscode.window.activeTextEditor == null ||
+		uri != null && uri.scheme != 'file')
+	{
+		vscode.window.showWarningMessage("Cannot stat this item.");
+		return;
+	}
+
+	const finalUri = uri || vscode.window.activeTextEditor!.document.uri;
+	const path = finalUri.fsPath;
+	const name = path.split("/").reverse()[0];
+
+	const panel = vscode.window.createWebviewPanel(
+		'file-properties',
+		`Properties of ${name}`,
+		vscode.ViewColumn.Two,
+		<vscode.WebviewOptions>{
+			enableFindWidget: true,
+			enableScripts: true,
+		}
+	);
+
+	panel.webview.html = await provideViewHtml(finalUri);
+
+	panel.webview.onDidReceiveMessage(async (message: { command: 'open', path: string }) =>
+	{
+		try
 		{
-			provider.update(filePropertiesUri(e.uri.fsPath));
+			switch (message.command)
+			{
+				case 'open':
+					const uri = vscode.Uri.parse('file://' + message.path);
+					const document = await vscode.workspace.openTextDocument(uri);
+					vscode.window.showTextDocument(document);
+					break;
+				default:
+					throw new Error(`Unknown command: ${message.command}`);
+			}
+		}
+		catch (error)
+		{
+			vscode.window.showErrorMessage(
+				`Failed to handle webview message: ${JSON.stringify(message)}\n` +
+				`Error: ${error}`);
+		}
+	});
+
+	const updateHandlers = [
+		vscode.workspace.onDidSaveTextDocument(async e =>
+		{
+			if (e.uri.toString() == finalUri.toString())
+				panel.webview.html = await provideViewHtml(finalUri);
 		}),
-		vscode.workspace.onDidChangeConfiguration(() =>
+		vscode.workspace.onDidChangeConfiguration(async () =>
 		{
-			provider.update();
-		})
+			panel.webview.html = await provideViewHtml(finalUri);
+		}),
 	];
 
-	return vscode.Disposable.from(...tokens);
+	panel.onDidDispose(() =>
+	{
+		updateHandlers.forEach(h => h.dispose());
+	});
 }

@@ -11,7 +11,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from "path";
 import { viewProperties } from '../command-names';
-import { PropertiesViewProvider } from '../properties-view-provider';
+import { provideViewHtml } from '../properties-view-provider';
 
 suite("Extension Tests", () =>
 {
@@ -29,11 +29,7 @@ suite("Extension Tests", () =>
 	});
 
 	const render = (fileName: string) =>
-		new PropertiesViewProvider()
-			.provideTextDocumentContent(
-				testFileUri(fileName),
-				new vscode.CancellationTokenSource().token
-			);
+		provideViewHtml(testFileUri(fileName));
 
 	test("Check HTML size strings.", async () =>
 	{

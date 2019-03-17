@@ -12,7 +12,7 @@
         "url": "https://github.com/brunnerh/file-properties-viewer.git"
     },
     "engines": {
-        "vscode": "^1.18.0"
+        "vscode": "^1.23.0"
     },
     "categories": [
         "Other"
