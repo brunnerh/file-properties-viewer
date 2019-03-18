@@ -2,7 +2,7 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size and last time modified.",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "publisher": "brunnerh",
     "license": "MIT",
     "icon": "icon/icon.png",

@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.3.2] - 2019-03-18
+
+- Fixed:
+  - Webview not working on Windows due to different file system path syntax.
+  - File link on Windows, also due to path syntax.
+  - Tab name showing not only file name on Windows, also due to path syntax.
+- Added:
+  - Line-break opportunities in paths to allow the table to shrink horizontally.
+
 ## [0.3.1] - 2019-03-18
 
 - Switch from deprecated `vscode.previewHtml` command to webview API. (This change should not have any noticeable effect.)
