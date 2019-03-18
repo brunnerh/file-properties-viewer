@@ -13,7 +13,7 @@ import { icons } from "./icons";
 
 export async function provideViewHtml(uri: vscode.Uri)
 {
-	const path = uri.path;
+	const path = uri.fsPath;
 	const name = basename(path);
 	const directory = dirname(path);
 	const stats = await promisify<fs.Stats>(fs.stat)(path);
@@ -49,12 +49,14 @@ export async function provideViewHtml(uri: vscode.Uri)
 	`;
 
 	const fileLink = (path: string) => html`
-		<a href="file://${path}" onclick="openFile(${JSON.stringify(path)})">${path}</a>
+		<a href="file://${path}" onclick="openFile(${JSON.stringify(path)})">
+			${makePathBreakable(path)}
+		</a>
 	`;
 
 	const rows: TableRow[] = [
 		new PropertyRow('Name', [name, copyButton(name)]),
-		new PropertyRow('Directory', [directory, copyButton(directory)]),
+		new PropertyRow('Directory', [makePathBreakable(directory), copyButton(directory)]),
 		new PropertyRow('Full Path', [fileLink(path), copyButton(path)]),
 		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
 		new PropertyRow('Created', formatDate(stats.birthtime)),
@@ -162,7 +164,12 @@ export async function provideViewHtml(uri: vscode.Uri)
 					vscode.postMessage({ command: 'open', path });
 				}
 
-				Object.assign(window, { copyTextToClipboard, openFile });
+				function post(data)
+				{
+					vscode.postMessage(data);
+				}
+
+				Object.assign(window, { copyTextToClipboard, openFile, post });
 			})();
 			</script>
 		</head>
@@ -178,9 +185,21 @@ export async function provideViewHtml(uri: vscode.Uri)
 					${rows.map(r => r.toHTML())}
 				</tbody>
 			</table>
+			<script>
+				// post({ command: 'log', data: document.documentElement.outerHTML });
+			</script>
 		</body>
 		</html>
 	`.content;
+
+	/**
+	 * Inserts a zero-width-space after every slash to create line-break opportunities.
+	 * @param path Path to process.
+	 */
+	function makePathBreakable(path: string): string
+	{
+		return path.replace(/([\/\\])/g, substr => `${substr}\u200B`);
+	}
 }
 
 abstract class TableRow
@@ -243,7 +262,7 @@ export async function viewPropertiesCommand(uri?: vscode.Uri)
 
 	const finalUri = uri || vscode.window.activeTextEditor!.document.uri;
 	const path = finalUri.fsPath;
-	const name = path.split("/").reverse()[0];
+	const name = path.split(/[\/\\]/).reverse()[0];
 
 	const panel = vscode.window.createWebviewPanel(
 		'file-properties',
@@ -257,19 +276,20 @@ export async function viewPropertiesCommand(uri?: vscode.Uri)
 
 	panel.webview.html = await provideViewHtml(finalUri);
 
-	panel.webview.onDidReceiveMessage(async (message: { command: 'open', path: string }) =>
+	panel.webview.onDidReceiveMessage(async (message: ViewMessage) =>
 	{
 		try
 		{
 			switch (message.command)
 			{
 				case 'open':
-					const uri = vscode.Uri.parse('file://' + message.path);
+					const uri = vscode.Uri.file(message.path);
 					const document = await vscode.workspace.openTextDocument(uri);
 					vscode.window.showTextDocument(document);
 					break;
-				default:
-					throw new Error(`Unknown command: ${message.command}`);
+				case 'log':
+					console.log(message.data);
+					break;
 			}
 		}
 		catch (error)
@@ -297,3 +317,16 @@ export async function viewPropertiesCommand(uri?: vscode.Uri)
 		updateHandlers.forEach(h => h.dispose());
 	});
 }
+
+interface OpenMessage
+{
+	command: 'open';
+	path: string;
+}
+interface LogMessage
+{
+	command: 'log';
+	data: any;
+}
+
+type ViewMessage = OpenMessage | LogMessage;
