@@ -16,7 +16,7 @@ export async function provideViewHtml(uri: vscode.Uri)
 	const path = uri.fsPath;
 	const name = basename(path);
 	const directory = dirname(path);
-	const stats = await promisify<fs.Stats>(fs.stat)(path);
+	const stats = await promisify<fs.Stats>(fs.stat)(path, { bigint: false }); // pretty-bytes throws for bigint
 
 	const formatDate = (date: Date) =>
 	{
