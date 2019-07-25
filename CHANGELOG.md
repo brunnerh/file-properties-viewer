@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.3] - 2019-07-25
+
+- Fixed: fs.stat throwing for undefined options argument.
+
 ## [0.3.2] - 2019-03-18
 
 - Fixed:
