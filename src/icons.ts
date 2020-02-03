@@ -1,8 +1,8 @@
-import { readFile } from "fs";
-import { promisify } from "./util";
-import { lazy } from "./lazy";
-import * as p from 'path';
 import * as fs from 'fs';
+import { readFile } from 'fs';
+import * as p from 'path';
+import { promisify } from 'util';
+import { lazy } from './lazy';
 
 /**
  * Loads contents of an SVG. Automatically uses min version if available (.min.svg).
@@ -15,7 +15,7 @@ const svg = async (relativePath: string) =>
 	const minPath = base + '.min.svg';
 	const loadPath = fs.existsSync(minPath) ? minPath : path;
 
-	const buffer = await promisify<Buffer>(readFile)(loadPath);
+	const buffer = await promisify(readFile)(loadPath);
 
 	return buffer.toString();
 }

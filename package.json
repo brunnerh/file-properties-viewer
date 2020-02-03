@@ -12,7 +12,7 @@
         "url": "https://github.com/brunnerh/file-properties-viewer.git"
     },
     "engines": {
-        "vscode": "^1.36.0"
+        "vscode": "^1.41.0"
     },
     "categories": [
         "Other"
@@ -99,9 +99,9 @@
     "devDependencies": {
         "@types/dateformat": "^1.0.1",
         "@types/mocha": "^2.2.48",
-        "@types/node": "^7.0.65",
+        "@types/node": "^12",
         "@types/pretty-bytes": "^5.2.0",
-        "@types/vscode": "^1.36.0",
+        "@types/vscode": "^1.41.0",
         "@types/xml2js": "^0.4.2",
         "svgo": "^1.2.0",
         "typescript": "^3.3.3333"

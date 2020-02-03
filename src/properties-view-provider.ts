@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import { basename, dirname, join } from "path";
 const prettyBytes: (size: number) => string = require("pretty-bytes");
-import { promisify } from "./util";
+import { promisify } from 'util';
 import * as dateformat from "dateformat";
 import { Config } from "./config-interface";
 import { execFile } from "child_process";
@@ -16,12 +16,14 @@ export async function provideViewHtml(uri: vscode.Uri)
 	const path = uri.fsPath;
 	const name = basename(path);
 	const directory = dirname(path);
-	const stats = await promisify<fs.Stats>(fs.stat)(path, { bigint: false }); // pretty-bytes throws for bigint
+	// pretty-bytes throws for bigint.
+	// Passing options argument breaks in remote env (https://github.com/microsoft/vscode/issues/89887)
+	const stats: fs.Stats = await promisify(fs.stat)(path);
 
 	const formatDate = (date: Date) =>
 	{
 		// Extract and only update on config changed event if performance is impacted.
-		const format = Config.section.get("dateTimeFormat");
+		const format = Config.section.get('dateTimeFormat');
 
 		return format == null ? date.toLocaleString() : dateformat(date, format);
 	}
@@ -122,8 +124,8 @@ export async function provideViewHtml(uri: vscode.Uri)
 		catch { }
 
 	const defaultStylePath = join(__dirname, '../styles/default.css');
-	const stylePath = Config.section.get("outputStylePath");
-	const style = (await promisify<Buffer>(fs.readFile)(stylePath ? stylePath : defaultStylePath))
+	const stylePath = Config.section.get('outputStylePath');
+	const style = (await promisify(fs.readFile)(stylePath ? stylePath : defaultStylePath))
 		.toString();
 
 	return html`
