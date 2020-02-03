@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.4] - 2020-02-03
+
+- Fixed: fs.stat with options argument not working in remote environment due to an outdated polyfill used by vscode-server.
+
 ## [0.3.3] - 2019-07-25
 
 - Fixed: fs.stat throwing for undefined options argument.
