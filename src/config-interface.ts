@@ -11,7 +11,6 @@ export class Config
 interface TypedConfig
 {
 	get(item: 'dateTimeFormat'): string | null;
-	get(item: 'queryMIME'): boolean;
 	get(item: 'queryMediaInfo'): boolean;
 	get(item: 'outputStylePath'): string | null;
 	get(item: 'disableRelativeTimestamps'): boolean;

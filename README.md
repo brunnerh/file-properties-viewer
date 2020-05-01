@@ -10,9 +10,10 @@ A view like this will be opened for the respective file:
 
 ![Example output](./readme-files/example.png)
 
+The [`Media Type`](https://en.wikipedia.org/wiki/Media_type) is determined based on the file name only. Results may be inaccurate if the same file extension is used by multiple file types. Uncommon types may also not be recognized.
+
 Additional information can be provided by the following applications:
 
-- [`xdg-mime`](https://www.freedesktop.org/wiki/Software/xdg-utils) - Queries the MIME type.
 - [`mediainfo`](https://mediaarea.net/en/MediaInfo) - Queries media information of images, audio and video.
 
 If the applications are available in the `PATH`, they will be called unless they are explicitly disabled via the settings. See the [installation on Windows section](#installing-utility-applications-on-windows) for some help with setting that up.
@@ -24,7 +25,6 @@ This extension has the following settings:
 - `filePropertiesViewer.dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `filePropertiesViewer.disableRelativeTimestamps`: Turns off relative timestamp display. 
 - `filePropertiesViewer.queryMediaInfo`: Whether media information via mediainfo should be requested.
-- `filePropertiesViewer.queryMIME`: Whether MIME information via xdg-mime should be requested.
 - `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.<br/>
     The default style can be found [here](./styles/default.css).<br/>
     The following classes are used within the table:
@@ -49,12 +49,6 @@ This extension has the following settings:
 2. Extract the archive to a directory and copy its location from the address bar of the explorer. The directory should contain the `MediaInfo.exe` application:<br/>
    ![Getting the MediaInfo path](./readme-files/mediainfo-get-path.png)
 3. Add the copied location to the `PATH` environment variable. (See [respective subsection](#adding-directories-to-the-path-environment-variable).)
-
-### xdg-mime
-
-The `xdg-mime` application is part of the `xdg-utils`. There does not appear to be a commonly available distribution for Windows (it may not even be compatible).
-
-You could try getting a [release from the repository](https://github.com/freedesktop/xdg-utils/releases) and build it from source.
 
 ### Adding directories to the `PATH` environment variable
 

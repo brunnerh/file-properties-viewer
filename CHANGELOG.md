@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.5.0] - 2020-05-01
+
+- Added:
+  - Extension-internal media type lookup via the [`mime`](https://www.npmjs.com/package/mime) package.
+- Removed:
+  - Dependency on external utility `xdg-mime` for media type lookup.
+  - Extension option `queryMIME`,
+- Changed:
+  - Renamed row `MIME Type` to `Media Type`.
+
 ## [0.4.1] - 2020-05-01
 
 - No functional changes. Publishes missing read-me/changelog adjustments for changes of v.0.4.0.
