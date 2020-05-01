@@ -22,6 +22,7 @@ If the applications are available in the `PATH`, they will be called unless they
 This extension has the following settings:
 
 - `filePropertiesViewer.dateTimeFormat`: Sets a custom date/time format for the timestamps.
+- `filePropertiesViewer.disableRelativeTimestamps`: Turns off relative timestamp display. 
 - `filePropertiesViewer.queryMediaInfo`: Whether media information via mediainfo should be requested.
 - `filePropertiesViewer.queryMIME`: Whether MIME information via xdg-mime should be requested.
 - `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.<br/>
