@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.4.1] - 2020-05-01
+
+- No functional changes. Publishes missing read-me/changelog adjustments for changes of v.0.4.0.
+
 ## [0.4.0] - 2020-05-01
 
 - Added:
