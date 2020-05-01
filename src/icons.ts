@@ -23,7 +23,10 @@ const svg = async (relativePath: string) =>
 class Icons
 {
 	@lazy
-	get copy() { return svg("../images/copy.svg") }
+	get copy() { return svg('../images/copy.svg') }
+
+	@lazy
+	get edit() { return svg('../images/edit.svg') }
 }
 
 export const icons = new Icons();

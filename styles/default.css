@@ -50,22 +50,21 @@ td.indent-3
 	padding-left: 60px;
 }
 
-.copy-button
+.icon-button
 {
+    padding: 3px 5px;
 	color: inherit;
 	border: 1px solid transparent;
 	background: none;
-	margin-left: 10px;
-	float: right;
 	cursor: pointer;
-	transition: border ease-in-out 0.3s;
+	transition: border ease-in-out 0.1s;
 }
-.copy-button:hover,
-.copy-button:focus
+.icon-button:hover,
+.icon-button:focus
 {
 	border-color: currentColor;
 }
-.copy-button > svg
+.icon-button > svg
 {
 	display: inline-block;
 	vertical-align: middle;

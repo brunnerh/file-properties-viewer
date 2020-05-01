@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.4.0] - 2020-05-01
+
+- Added:
+  - Display relative time after timestamps.
+  - Option for turning off the relative time display (`disableRelativeTimestamps`).
+  - Directory path link which should open the folder in the default file manager.
+  - Edit button which tries to open the file in VS Code (previously the functionality of the full path link).
+  - Tooltips for buttons.
+- Changed:
+  - Full path link now opens the file with the default application.
+- Fixed:
+  - Being unable to use command on user settings file.
+
 ## [0.3.4] - 2020-02-03
 
 - Fixed: fs.stat with options argument not working in remote environment due to an outdated polyfill used by vscode-server.

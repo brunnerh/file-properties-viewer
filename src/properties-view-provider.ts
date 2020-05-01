@@ -8,7 +8,7 @@ import { Config } from "./config-interface";
 import { execFile } from "child_process";
 import { parseString as parseXML } from "xml2js";
 import { MediaInfoContainer } from "./media-info";
-import { html, HtmlString, raw } from "./html";
+import { html, raw, HtmlValue, HtmlString } from "./html";
 import { icons } from "./icons";
 
 export async function provideViewHtml(uri: vscode.Uri)
@@ -17,16 +17,43 @@ export async function provideViewHtml(uri: vscode.Uri)
 	const name = basename(path);
 	const directory = dirname(path);
 	// pretty-bytes throws for bigint.
-	// Passing options argument breaks in remote env (https://github.com/microsoft/vscode/issues/89887)
 	const stats: fs.Stats = await promisify(fs.stat)(path);
 
 	const formatDate = (date: Date) =>
 	{
 		// Extract and only update on config changed event if performance is impacted.
 		const format = Config.section.get('dateTimeFormat');
+		const disableRelative = Config.section.get('disableRelativeTimestamps');
 
-		return format == null ? date.toLocaleString() : dateformat(date, format);
-	}
+		const absolute = format == null ? date.toLocaleString() : dateformat(date, format);
+		if (disableRelative)
+			return absolute;
+
+		const relative = formatDateRelative(date);
+
+		return `${absolute} (${relative})`;
+	};
+
+	const formatDateRelative = (date: Date) =>
+	{
+		// TODO: remove when RelativeTimeFormat makes it into TS libs
+		// @ts-ignore
+		const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+		const delta = -(new Date().getTime() - date.getTime());
+		const units = [
+			['year', 31536000000],
+			['month', 2628000000],
+			['day', 86400000],
+			['hour', 3600000],
+			['minute', 60000],
+			['second', 1000],
+		] as const;
+
+		for (const [unit, amount] of units)
+			if (Math.abs(delta) > amount || unit === 'second')
+				return formatter.format(Math.round(delta / amount), unit);
+	};
 
 	// Byte size redundant for sizes < 1000;
 	const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
@@ -43,23 +70,39 @@ export async function provideViewHtml(uri: vscode.Uri)
 	});
 
 	const copyIcon = await icons.copy;
+	const editIcon = await icons.edit;
 
 	const copyButton = (text: string) => html`
-		<button class="copy-button" onclick="copyTextToClipboard(${JSON.stringify(text)})">
+		<button type="button" class="icon-button" title="Copy to clipboard"
+			onclick="copyTextToClipboard(${JSON.stringify(text)})">
 			${raw(copyIcon)}
 		</button>
 	`;
 
-	const fileLink = (path: string) => html`
-		<a href="file://${path}" onclick="openFile(${JSON.stringify(path)})">
+	const editButton = (path: string) => html`
+		<button type="button" class="icon-button" title="Edit file"
+			onclick="openFile(${JSON.stringify(path)})">
+			${raw(editIcon)}
+		</button>
+	`;
+
+	const externalLink = (path: string) => html`
+		<a href="file://${path}" onclick="openExternal(${JSON.stringify(path)})">
 			${makePathBreakable(path)}
 		</a>
 	`;
 
+	const cellWithButtons = (content: HtmlValue, ...buttons: HtmlValue[]) => html`
+		<div style="display: flex; align-items: center;">
+			<div style="flex: 1 1 auto;">${content}</div>
+			<div style="flex: 0 0 auto; margin-left: 10px;">${buttons}</div>
+		</div>
+	`;
+
 	const rows: TableRow[] = [
-		new PropertyRow('Name', [name, copyButton(name)]),
-		new PropertyRow('Directory', [makePathBreakable(directory), copyButton(directory)]),
-		new PropertyRow('Full Path', [fileLink(path), copyButton(path)]),
+		new PropertyRow('Name', cellWithButtons(name, editButton(path), copyButton(name))),
+		new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))),
+		new PropertyRow('Full Path', cellWithButtons(externalLink(path), copyButton(path))),
 		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
 		new PropertyRow('Created', formatDate(stats.birthtime)),
 		new PropertyRow('Changed', formatDate(stats.ctime)),
@@ -166,12 +209,17 @@ export async function provideViewHtml(uri: vscode.Uri)
 					vscode.postMessage({ command: 'open', path });
 				}
 
+				function openExternal(path)
+				{
+					vscode.postMessage({ command: 'open-external', path });
+				}
+
 				function post(data)
 				{
 					vscode.postMessage(data);
 				}
 
-				Object.assign(window, { copyTextToClipboard, openFile, post });
+				Object.assign(window, { copyTextToClipboard, openFile, openExternal, post });
 			})();
 			</script>
 		</head>
@@ -256,7 +304,7 @@ class SubGroupRow extends TableRow
 export async function viewPropertiesCommand(uri?: vscode.Uri)
 {
 	if (uri == null && vscode.window.activeTextEditor == null ||
-		uri != null && uri.scheme != 'file')
+		uri != null && uri.scheme != 'file' && uri.scheme != 'vscode-userdata')
 	{
 		vscode.window.showWarningMessage("Cannot stat this item.");
 		return;
@@ -287,7 +335,11 @@ export async function viewPropertiesCommand(uri?: vscode.Uri)
 				case 'open':
 					const uri = vscode.Uri.file(message.path);
 					const document = await vscode.workspace.openTextDocument(uri);
-					vscode.window.showTextDocument(document);
+					await vscode.window.showTextDocument(document);
+					break;
+				case 'open-external':
+					const dirUri = vscode.Uri.file(message.path);
+					await vscode.env.openExternal(dirUri);
 					break;
 				case 'log':
 					console.log(message.data);
@@ -325,10 +377,15 @@ interface OpenMessage
 	command: 'open';
 	path: string;
 }
+interface OpenExternalMessage
+{
+	command: 'open-external';
+	path: string;
+}
 interface LogMessage
 {
 	command: 'log';
 	data: any;
 }
 
-type ViewMessage = OpenMessage | LogMessage;
+type ViewMessage = OpenMessage | OpenExternalMessage | LogMessage;
