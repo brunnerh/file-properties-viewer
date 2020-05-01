@@ -28,7 +28,7 @@ This extension has the following settings:
 - `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.<br/>
     The default style can be found [here](./styles/default.css).<br/>
     The following classes are used within the table:
-    - `copy-button`: Used on the copy button. Has an `svg` as immediate child.
+    - `icon-button`: Used on the edit and copy buttons. Has an `svg` as immediate child.
     - `column-header-row`: The very top row.
       - `column-header-cell`: Cells in top row.
     - `property-row`: Row with property and value.

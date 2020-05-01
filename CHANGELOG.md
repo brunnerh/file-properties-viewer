@@ -10,6 +10,7 @@
   - Tooltips for buttons.
 - Changed:
   - Full path link now opens the file with the default application.
+  - CSS for styling: Class `copy-button` renamed to `icon-button`, which is used for both edit and copy.
 - Fixed:
   - Being unable to use command on user settings file.
 
