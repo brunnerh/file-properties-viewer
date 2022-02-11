@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 
+export const sectionName = 'filePropertiesViewer';
+
 export class Config
 {
 	static get section(): vscode.WorkspaceConfiguration & TypedConfig
 	{
-		return vscode.workspace.getConfiguration('filePropertiesViewer');
+		return vscode.workspace.getConfiguration(sectionName);
 	}
 }
 

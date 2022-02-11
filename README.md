@@ -1,14 +1,26 @@
 # File Properties Viewer
 
-This is an extension for [Visual Studio Code](https://code.visualstudio.com/) which adds a command and related context menu entries for displaying file system properties of a given file. It shows file size and timestamps like the creation date.
+This is an extension for [Visual Studio Code](https://code.visualstudio.com/) which adds a view, command and related context menu entries for displaying file system properties of a given file. It shows file size and timestamps like the creation date.
 
 ## Features
 
+### View
+
+The view can by default be found in the "Explorer" section of the side bar. It can be dragged to its own section, the bottom panel or the side panel. This view updates as the opened editor changes.
+
+![Example view](./readme-files/example-view.png)
+
+Currently the view only handles text documents, whereas the command can be used on different file types as well.
+
+### Command
+
 The command can be invoked via command palette, keyboard shortcut or from either the tab context menu, or the project explorer file context menu.
 
-A view like this will be opened for the respective file:
+A similar view will be opened for the respective file. This view is always associated with a specific file:
 
 ![Example output](./readme-files/example.png)
+
+### Media Information
 
 The [`Media Type`](https://en.wikipedia.org/wiki/Media_type) is determined based on the file name only. Results may be inaccurate if the same file extension is used by multiple file types. Uncommon types may also not be recognized.
 
@@ -25,20 +37,22 @@ This extension has the following settings:
 - `filePropertiesViewer.dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `filePropertiesViewer.disableRelativeTimestamps`: Turns off relative timestamp display. 
 - `filePropertiesViewer.queryMediaInfo`: Whether media information via mediainfo should be requested.
-- `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.<br/>
-    The default style can be found [here](./styles/default.css).<br/>
-    The following classes are used within the table:
-    - `icon-button`: Used on the edit and copy buttons. Has an `svg` as immediate child.
-    - `column-header-row`: The very top row.
-      - `column-header-cell`: Cells in top row.
-    - `property-row`: Row with property and value.
-      - `key-cell`: Cell in property column.
-      - `value-cell`: Cell of value column.
-      - `indent-<n>`: Defined on property cell, number `<n>` increases for nested property rows.
-    - `group-row`: Top level group row (e.g. `Media Info`).
-      - `group-cell`: Cell of group row (spans both columns).
-    - `sub-group-row`: Second level group row (e.g. `Media Info` > `Image`)
-      - `sub-group-cell`: Cell of sub-group row (spans both columns).
+- `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.  
+  The default style can be found [here](./styles/default.css).  
+  The following classes are used within the table:
+  - `icon-button`: Used on the edit and copy buttons. Has an `svg` as immediate child.
+  - `column-header-row`: The very top row.
+    - `column-header-cell`: Cells in top row.
+  - `property-row`: Row with property and value.
+    - `key-cell`: Cell in property column.
+    - `value-cell`: Cell of value column.
+    - `indent-<n>`: Defined on property cell, number `<n>` increases for nested property rows.
+  - `group-row`: Top level group row (e.g. `Media Info`).
+    - `group-cell`: Cell of group row (spans both columns).
+  - `sub-group-row`: Second level group row (e.g. `Media Info` > `Image`)
+    - `sub-group-cell`: Cell of sub-group row (spans both columns).
+
+  The root element has a `data-view` attribute whose value will be either `static` or `command` depending on how the view was displayed.
 
 ## Installing Utility Applications on Windows
 

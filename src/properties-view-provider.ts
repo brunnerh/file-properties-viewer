@@ -1,25 +1,22 @@
-import * as vscode from "vscode";
-import * as fs from "fs";
-import { basename, dirname, join } from "path";
-const prettyBytes: (size: number) => string = require("pretty-bytes");
-import { promisify } from 'util';
-import * as dateformat from "dateformat";
-import { Config } from "./config-interface";
 import { execFile } from "child_process";
-import { parseString as parseXML } from "xml2js";
-import { MediaInfoContainer } from "./media-info";
-import { html, raw, HtmlValue, HtmlString } from "./html";
-import { TableRow, PropertyRow, GroupRow, SubGroupRow } from "./table-row";
-import { icons } from "./icons";
+import * as dateformat from "dateformat";
+import * as fs from "fs";
 import * as mime from 'mime';
+import { basename, dirname, join } from "path";
+import { promisify } from 'util';
+import * as vscode from "vscode";
+import { Uri } from 'vscode';
+import { parseString as parseXML } from "xml2js";
+import { Config } from "./config-interface";
+import { html, HtmlValue, raw } from "./html";
+import { icons } from "./icons";
+import { MediaInfoContainer } from "./media-info";
+import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
+const prettyBytes: (size: number) => string = require("pretty-bytes");
 
-export async function provideViewHtml(uri: vscode.Uri)
+export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 {
-	const path = uri.fsPath;
-	const name = basename(path);
-	const directory = dirname(path);
-	// pretty-bytes throws for bigint.
-	const stats: fs.Stats = await promisify(fs.stat)(path);
+	const { path, directory, name, stats } = await baseData(uri);
 
 	// Byte size redundant for sizes < 1000;
 	const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
@@ -27,25 +24,30 @@ export async function provideViewHtml(uri: vscode.Uri)
 	const copyIcon = await icons.copy;
 	const editIcon = await icons.edit;
 
-	const copyButton = (text: string) => html`
+	const copyButton = (textOrUri: string | Uri) => html`
 		<button type="button" class="icon-button" title="Copy to clipboard"
-			onclick="copyTextToClipboard(${JSON.stringify(text)})">
+			onclick="copyTextToClipboard(${JSON.stringify(
+				typeof textOrUri == 'string' ? textOrUri : getUriText(textOrUri)
+			)})">
 			${raw(copyIcon)}
 		</button>
 	`;
 
-	const editButton = (path: string) => html`
+	const editButton = (uri: Uri) => html`
 		<button type="button" class="icon-button" title="Edit file"
-			onclick="openFile(${JSON.stringify(path)})">
+			onclick="openFile(${JSON.stringify(uri.toString())})">
 			${raw(editIcon)}
 		</button>
 	`;
 
-	const externalLink = (path: string) => html`
-		<a href="file://${path}" onclick="openExternal(${JSON.stringify(path)})">
-			${makePathBreakable(path)}
+	const externalLink = (uri: Uri) => html`
+		<a href="${uri.toString()}" onclick="openExternal(event)">
+			${makePathBreakable(getUriText(uri))}
 		</a>
 	`;
+
+	const getUriText = (uri: Uri) =>
+		uri.scheme == 'file' ? uri.fsPath : uri.toString();
 
 	const cellWithButtons = (content: HtmlValue, ...buttons: HtmlValue[]) => html`
 		<div style="display: flex; align-items: center;">
@@ -55,15 +57,15 @@ export async function provideViewHtml(uri: vscode.Uri)
 	`;
 
 	const rows: TableRow[] = [
-		new PropertyRow('Name', cellWithButtons(name, editButton(path), copyButton(name))),
-		new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))),
-		new PropertyRow('Full Path', cellWithButtons(externalLink(path), copyButton(path))),
+		new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
+		directory != null ? new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))) : null,
+		new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
 		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
-		new PropertyRow('Created', formatDate(stats.birthtime)),
-		new PropertyRow('Changed', formatDate(stats.ctime)),
-		new PropertyRow('Modified', formatDate(stats.mtime)),
-		new PropertyRow('Accessed', formatDate(stats.atime)),
-	];
+		stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
+		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)): null,
+		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)): null,
+		stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)): null,
+	].filter(r => r != null) as TableRow[];
 
 	addMediaType(path, rows);
 	await addMediaInfo(path, rows);
@@ -75,7 +77,7 @@ export async function provideViewHtml(uri: vscode.Uri)
 
 	return html`
 		<!DOCTYPE html>
-		<html lang="en">
+		<html lang="en" data-view="${view}">
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -106,14 +108,15 @@ export async function provideViewHtml(uri: vscode.Uri)
 					}
 				}
 
-				function openFile(path)
+				function openFile(uri)
 				{
-					vscode.postMessage({ command: 'open', path });
+					vscode.postMessage({ command: 'open', uri });
 				}
 
-				function openExternal(path)
+				function openExternal(e)
 				{
-					vscode.postMessage({ command: 'open-external', path });
+					const uri = e.currentTarget.href;
+					vscode.postMessage({ command: 'open-external', uri });
 				}
 
 				function post(data)
@@ -143,6 +146,61 @@ export async function provideViewHtml(uri: vscode.Uri)
 		</body>
 		</html>
 	`.content;
+}
+
+async function baseData(uri: Uri): Promise<BaseData>
+{
+	if (uri.scheme == 'file')
+	{
+		const path = uri.fsPath;
+		const name = basename(path);
+		const directory = Uri.file(dirname(path));
+		// bigint throws on format later
+		const { size, birthtime, ctime, mtime, atime} = await promisify(fs.stat)(path);
+
+		return {
+			path, name, directory,
+			stats: {
+				size,
+				created: birthtime,
+				changed: ctime,
+				modified: mtime,
+				accessed: atime,
+			},
+		};
+	}
+	else // Virtual
+	{
+		const path = uri.toString();
+		const name = basename(uri.toString());
+		const directory = null;
+		const { size, ctime, mtime } = await vscode.workspace.fs.stat(uri);
+
+		return {
+			path, name, directory,
+			stats: {
+				size,
+				created: ctime <= 0 ? null : new Date(ctime),
+				changed: null,
+				modified: mtime <= 0 ? null : new Date(mtime),
+				accessed: null,
+			},
+		};
+	}
+}
+
+interface BaseData
+{
+	path: string;
+	name: string;
+	directory: Uri | null,
+	stats: {
+		size: number,
+		created: Date | null,
+		changed: Date | null,
+		modified: Date | null,
+		accessed: Date | null,
+	}
 }
 
 function addMediaType(path: string, rows: TableRow[])
@@ -196,18 +254,17 @@ async function addMediaInfo(path: string, rows: TableRow[])
 		catch { }
 }
 
-export async function viewPropertiesCommand(uri?: vscode.Uri)
+export async function viewPropertiesCommand(uri?: Uri)
 {
-	if (uri == null && vscode.window.activeTextEditor == null ||
-		uri != null && uri.scheme != 'file' && uri.scheme != 'vscode-userdata')
+	const editor = vscode.window.activeTextEditor;
+	if (uri == null && editor == null)
 	{
 		vscode.window.showWarningMessage("Cannot stat this item.");
 		return;
 	}
 
-	const finalUri = uri || vscode.window.activeTextEditor!.document.uri;
-	const path = finalUri.fsPath;
-	const name = path.split(/[\/\\]/).reverse()[0];
+	const finalUri = uri ?? editor!.document.uri;
+	const name = basename(finalUri.toString());
 
 	const panel = vscode.window.createWebviewPanel(
 		'file-properties',
@@ -219,52 +276,51 @@ export async function viewPropertiesCommand(uri?: vscode.Uri)
 		}
 	);
 
-	panel.webview.html = await provideViewHtml(finalUri);
+	panel.webview.html = await provideViewHtml('command', finalUri);
 
-	panel.webview.onDidReceiveMessage(async (message: ViewMessage) =>
-	{
-		try
-		{
-			switch (message.command)
-			{
-				case 'open':
-					const uri = vscode.Uri.file(message.path);
-					const document = await vscode.workspace.openTextDocument(uri);
-					await vscode.window.showTextDocument(document);
-					break;
-				case 'open-external':
-					const dirUri = vscode.Uri.file(message.path);
-					await vscode.env.openExternal(dirUri);
-					break;
-				case 'log':
-					console.log(message.data);
-					break;
-			}
-		}
-		catch (error)
-		{
-			vscode.window.showErrorMessage(
-				`Failed to handle webview message: ${JSON.stringify(message)}\n` +
-				`Error: ${error}`);
-		}
-	});
+	panel.webview.onDidReceiveMessage(onViewMessage);
 
 	const updateHandlers = [
 		vscode.workspace.onDidSaveTextDocument(async e =>
 		{
 			if (e.uri.toString() == finalUri.toString())
-				panel.webview.html = await provideViewHtml(finalUri);
+				panel.webview.html = await provideViewHtml('command', finalUri);
 		}),
 		vscode.workspace.onDidChangeConfiguration(async () =>
 		{
-			panel.webview.html = await provideViewHtml(finalUri);
+			panel.webview.html = await provideViewHtml('command', finalUri);
 		}),
 	];
 
-	panel.onDidDispose(() =>
+	panel.onDidDispose(() => updateHandlers.forEach(h => h.dispose()));
+}
+
+export async function onViewMessage(message: ViewMessage)
+{
+	try
 	{
-		updateHandlers.forEach(h => h.dispose());
-	});
+		switch (message.command)
+		{
+			case 'open':
+				const uri = Uri.parse(message.uri);
+				const document = await vscode.workspace.openTextDocument(uri);
+				await vscode.window.showTextDocument(document);
+				break;
+			case 'open-external':
+				const extUri = Uri.parse(message.uri);
+				await vscode.env.openExternal(extUri);
+				break;
+			case 'log':
+				console.log(message.data);
+				break;
+		}
+	}
+	catch (error)
+	{
+		vscode.window.showErrorMessage(
+			`Failed to handle webview message: ${JSON.stringify(message)}\n` +
+			`Error: ${error}`);
+	}
 }
 
 // #region Utilities
@@ -333,12 +389,12 @@ function exec(path: string, args: string[])
 interface OpenMessage
 {
 	command: 'open';
-	path: string;
+	uri: string;
 }
 interface OpenExternalMessage
 {
 	command: 'open-external';
-	path: string;
+	uri: string;
 }
 interface LogMessage
 {

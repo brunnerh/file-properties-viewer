@@ -2,6 +2,22 @@
 {
 	--border: 1px solid currentColor;
 }
+:root[data-view=static]
+{
+	--border: none;
+}
+
+[data-view=static] body
+{
+	margin: 0;
+	padding: 0;
+	color: var(--vscode-sideBar-foreground, var(--vscode-editor-foreground));
+}
+[data-view=static] table
+{
+	box-sizing: border-box;
+	width: 100%;
+}
 
 table
 {
@@ -17,6 +33,11 @@ th, td
 	padding: 8px;
 	border-top: var(--border);
 }
+[data-view=static] th,
+[data-view=static] td
+{
+	padding: 4px 8px;
+}
 tr:last-child th,
 tr:last-child td
 {
@@ -27,6 +48,12 @@ tr:last-child td
 {
 	text-align: left;
 	border-top: none;
+}
+[data-view=static] .column-header-cell
+{
+	background: var(--vscode-sideBar-background, none);
+	position: sticky;
+	top: 0;
 }
 .group-row
 {

@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.0.0] - 2022-02-11
+
+- Added:
+  - View that can be shown in the panel or sidebars. Default location: "Explorer"
+  - Support for virtual file systems (available information will be limited).
+
 ## [0.5.0] - 2020-05-01
 
 - Added:
