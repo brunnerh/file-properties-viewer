@@ -27,8 +27,8 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 	const copyButton = (textOrUri: string | Uri) => html`
 		<button type="button" class="icon-button" title="Copy to clipboard"
 			onclick="copyTextToClipboard(${JSON.stringify(
-		typeof textOrUri == 'string' ? textOrUri : getUriText(textOrUri)
-	)})">
+				typeof textOrUri == 'string' ? textOrUri : getUriText(textOrUri)
+			)})">
 			${raw(copyIcon)}
 		</button>
 	`;
