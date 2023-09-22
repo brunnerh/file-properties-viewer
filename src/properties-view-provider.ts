@@ -14,6 +14,43 @@ import { MediaInfoContainer } from "./media-info";
 import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
 const prettyBytes: (size: number) => string = require("pretty-bytes");
 
+// rwx rwx rwx
+function modeToPermission(inbMode: string) : string {
+	inbMode = '000' + inbMode;
+	inbMode = inbMode.substring(inbMode.length - 3);
+
+	var out = '';
+	var inbMode1 = inbMode.substring(0,1);
+	if (inbMode1 === '1') {
+		out += 'r';
+	} else {
+		out += '-';
+	}
+	var inbMode2 = inbMode.substring(1,2);
+	if (inbMode2 === '1') {
+		out += 'w';
+	} else {
+		out += '-';
+	}
+	var inbMode3 = inbMode.substring(2,3);
+	if (inbMode3 === '1') {
+		out += 'x';
+	} else {
+		out += '-';
+	}
+	return out;
+}
+
+// rwx rwx rwx
+function displayMode(inMode: number) : string {
+	var oMode = '0000' + (inMode & 0o07777).toString(8);
+	oMode = oMode.substring(oMode.length - 3);
+	var oMode1 = parseInt(oMode.substring(0,1)).toString(2);
+	var oMode2 = parseInt(oMode.substring(1,2)).toString(2);
+	var oMode3 = parseInt(oMode.substring(2,3)).toString(2);
+	return inMode + ' -> o' + oMode + ' [' + modeToPermission(oMode1)+ ' ' + modeToPermission(oMode2)+ ' ' + modeToPermission(oMode3) + ']';
+}
+
 export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 {
 	const { path, directory, name, stats } = await baseData(uri);
@@ -65,6 +102,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)): null,
 		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)): null,
 		stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)): null,
+		stats.accessed ? new PropertyRow('Mode', displayMode(stats.mode)): null,
 	].filter(r => r != null) as TableRow[];
 
 	addMediaType(path, rows);
@@ -156,7 +194,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 		const name = basename(path);
 		const directory = Uri.file(dirname(path));
 		// bigint throws on format later
-		const { size, birthtime, ctime, mtime, atime} = await promisify(fs.stat)(path);
+		const { size, birthtime, ctime, mtime, atime, mode } = await promisify(fs.stat)(path);
 
 		return {
 			path, name, directory,
@@ -166,6 +204,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 				changed: ctime,
 				modified: mtime,
 				accessed: atime,
+				mode: mode,
 			},
 		};
 	}
@@ -184,6 +223,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 				changed: null,
 				modified: mtime <= 0 ? null : new Date(mtime),
 				accessed: null,
+				mode: 0,
 			},
 		};
 	}
@@ -200,6 +240,7 @@ interface BaseData
 		changed: Date | null,
 		modified: Date | null,
 		accessed: Date | null,
+		mode: number | 0,
 	}
 }
 
