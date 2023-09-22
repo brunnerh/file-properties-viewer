@@ -1,9 +1,5 @@
 # Change Log
 
-## [1.0.1] - 2023-09-21
-- Added:
-  - Mode display for the file Ex: Mode	33206 -> o666 [rw- rw- rw-] 
-
 ## [1.0.0] - 2022-02-11
 
 - Added:

@@ -14,43 +14,6 @@ import { MediaInfoContainer } from "./media-info";
 import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
 const prettyBytes: (size: number) => string = require("pretty-bytes");
 
-// rwx rwx rwx
-function modeToPermission(inbMode: string) : string {
-	inbMode = '000' + inbMode;
-	inbMode = inbMode.substring(inbMode.length - 3);
-
-	var out = '';
-	var inbMode1 = inbMode.substring(0,1);
-	if (inbMode1 === '1') {
-		out += 'r';
-	} else {
-		out += '-';
-	}
-	var inbMode2 = inbMode.substring(1,2);
-	if (inbMode2 === '1') {
-		out += 'w';
-	} else {
-		out += '-';
-	}
-	var inbMode3 = inbMode.substring(2,3);
-	if (inbMode3 === '1') {
-		out += 'x';
-	} else {
-		out += '-';
-	}
-	return out;
-}
-
-// rwx rwx rwx
-function displayMode(inMode: number) : string {
-	var oMode = '0000' + (inMode & 0o07777).toString(8);
-	oMode = oMode.substring(oMode.length - 3);
-	var oMode1 = parseInt(oMode.substring(0,1)).toString(2);
-	var oMode2 = parseInt(oMode.substring(1,2)).toString(2);
-	var oMode3 = parseInt(oMode.substring(2,3)).toString(2);
-	return inMode + ' -> o' + oMode + ' [' + modeToPermission(oMode1)+ ' ' + modeToPermission(oMode2)+ ' ' + modeToPermission(oMode3) + ']';
-}
-
 export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 {
 	const { path, directory, name, stats } = await baseData(uri);
@@ -64,8 +27,8 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 	const copyButton = (textOrUri: string | Uri) => html`
 		<button type="button" class="icon-button" title="Copy to clipboard"
 			onclick="copyTextToClipboard(${JSON.stringify(
-				typeof textOrUri == 'string' ? textOrUri : getUriText(textOrUri)
-			)})">
+		typeof textOrUri == 'string' ? textOrUri : getUriText(textOrUri)
+	)})">
 			${raw(copyIcon)}
 		</button>
 	`;
@@ -93,16 +56,32 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		</div>
 	`;
 
+	const permissions = (mode: number) =>
+	{
+		const title = [
+			'Permissions by user, group and other.',
+			'Might only be meaningful on Unix systems.',
+			'  r = read',
+			'  w = write',
+			'  x = execute',
+			'If a flag does not exist on the system, an underscore is shown.',
+			'If a flag is unset, a dash is shown.',
+			'If all flags are available the octal representation is shown in parentheses.',
+		].join('\n');
+
+		return html`<span title="${title}">${formatPermissions(mode)}</span>`;
+	};
+
 	const rows: TableRow[] = [
 		new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
 		directory != null ? new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))) : null,
 		new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
 		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
 		stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
-		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)): null,
-		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)): null,
-		stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)): null,
-		stats.accessed ? new PropertyRow('Mode', displayMode(stats.mode)): null,
+		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
+		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)) : null,
+		stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)) : null,
+		stats.mode != null ? new PropertyRow('Permissions', permissions(stats.mode)) : null,
 	].filter(r => r != null) as TableRow[];
 
 	addMediaType(path, rows);
@@ -204,7 +183,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 				changed: ctime,
 				modified: mtime,
 				accessed: atime,
-				mode: mode,
+				mode,
 			},
 		};
 	}
@@ -223,7 +202,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 				changed: null,
 				modified: mtime <= 0 ? null : new Date(mtime),
 				accessed: null,
-				mode: 0,
+				mode: null,
 			},
 		};
 	}
@@ -240,7 +219,7 @@ interface BaseData
 		changed: Date | null,
 		modified: Date | null,
 		accessed: Date | null,
-		mode: number | 0,
+		mode: number | null,
 	}
 }
 
@@ -366,6 +345,55 @@ export async function onViewMessage(message: ViewMessage)
 
 // #region Utilities
 
+/**
+ * Extracts and formats permissions from file mode.  
+ * Grouped by user, group and other (`rwx rwx rwx`).
+ */
+function formatPermissions(mode: number): string
+{
+	// https://nodejs.org/docs/latest-v18.x/api/fs.html#file-mode-constants
+	const flagGroups: FlagGroup[] = [
+		{
+			S_IRUSR: 'r',
+			S_IWUSR: 'w',
+			S_IXUSR: 'x',
+		},
+		{
+			S_IRGRP: 'r',
+			S_IWGRP: 'w',
+			S_IXGRP: 'x',
+		},
+		{
+			S_IROTH: 'r',
+			S_IWOTH: 'w',
+			S_IXOTH: 'x',
+		},
+	];
+
+	const flags = flagGroups
+		.map(group =>
+			(Object.entries(group) as [FlagKey, FlagSymbol][])
+				.map(([flag, char]) =>
+					flag in fs.constants == false ? '_' :
+					(mode & fs.constants[flag]) == 0 ? '-' :
+					char
+				)
+				.join('')
+		)
+		.join(' ');
+
+	const octalRaw = mode.toString(8);
+	const octal = octalRaw
+		.padStart(3, '0')
+		.substring(octalRaw.length - 3); // There may be other bits set
+
+	const systemHasAllFlags = flagGroups
+		.flatMap(group => Object.keys(group))
+		.every(flag => flag in fs.constants);
+
+	return systemHasAllFlags ? `${flags} (${octal})` : flags;
+}
+
 function formatDate(date: Date)
 {
 	// Extract and only update on config changed event if performance is impacted.
@@ -424,6 +452,10 @@ function exec(path: string, args: string[])
 		});
 	});
 }
+
+type FlagKey = keyof typeof fs.constants;
+type FlagSymbol = 'r' | 'w' | 'x';
+type FlagGroup = Partial<Record<FlagKey, FlagSymbol>>;
 
 // #endregion
 
