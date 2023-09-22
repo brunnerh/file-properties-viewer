@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.1.0] - 2023-09-22
+
+- Added:
+  - Setting for kibi/kilo file sizes (`sizeMode`).
+  - Real path, shown if path contains symbolic links.
+  - Unix style file permissions, might only show useful information on Unix systems. (Contributions by [@krisk1958](https://github.com/krisk1958))
+- Changed:
+  - File sizes are formatted with current locale.  
+    Exact byte size should now also contain thousands separators.
+
 ## [1.0.0] - 2022-02-11
 
 - Added:

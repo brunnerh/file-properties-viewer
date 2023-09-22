@@ -2,7 +2,7 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size, various time stamps and media type.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "publisher": "brunnerh",
     "license": "MIT",
     "icon": "icon/icon.png",
