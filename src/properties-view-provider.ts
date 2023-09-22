@@ -15,7 +15,7 @@ import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
 
 export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 {
-	const { path, directory, name, stats } = await baseData(uri);
+	const { path, directory, name, realPath, stats } = await baseData(uri);
 
 	// Byte size redundant for sizes < unit factor
 	const sizeMode = Config.section.get('sizeMode');
@@ -76,8 +76,18 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 
 	const rows: TableRow[] = [
 		new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
-		directory != null ? new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))) : null,
+		directory != null ?
+			new PropertyRow('Directory', cellWithButtons(
+				externalLink(directory),
+				copyButton(directory),
+			)) : null,
 		new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
+		realPath != null && uri.toString() != realPath.toString() ?
+			new PropertyRow('Real Path', cellWithButtons(
+				externalLink(realPath),
+				editButton(realPath),
+				copyButton(realPath),
+			)) : null,
 		new PropertyRow('Size', formatBytes(stats.size, sizeMode) + exactSize),
 		stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
 		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
@@ -175,10 +185,12 @@ async function baseData(uri: Uri): Promise<BaseData>
 		const name = basename(path);
 		const directory = Uri.file(dirname(path));
 		// bigint throws on format later
-		const { size, birthtime, ctime, mtime, atime, mode } = await promisify(fs.stat)(path);
+		const stats = await promisify(fs.stat)(path);
+		const { size, birthtime, ctime, mtime, atime, mode } = stats;
+		const realPath = Uri.file(await promisify(fs.realpath)(path));
 
 		return {
-			path, name, directory,
+			path, name, directory, realPath,
 			stats: {
 				size,
 				created: birthtime,
@@ -194,10 +206,11 @@ async function baseData(uri: Uri): Promise<BaseData>
 		const path = uri.toString();
 		const name = basename(uri.toString());
 		const directory = null;
+		const realPath = null;
 		const { size, ctime, mtime } = await vscode.workspace.fs.stat(uri);
 
 		return {
-			path, name, directory,
+			path, name, directory, realPath,
 			stats: {
 				size,
 				created: ctime <= 0 ? null : new Date(ctime),
@@ -213,6 +226,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 interface BaseData
 {
 	path: string;
+	realPath: Uri | null,
 	name: string;
 	directory: Uri | null,
 	stats: {
@@ -445,8 +459,6 @@ function formatDate(date: Date)
 
 function formatDateRelative(date: Date)
 {
-	// TODO: remove when RelativeTimeFormat makes it into TS libs
-	// @ts-ignore
 	const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
 	const delta = -(new Date().getTime() - date.getTime());

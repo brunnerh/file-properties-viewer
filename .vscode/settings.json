@@ -2,6 +2,7 @@
     "editor.useTabStops": true,
     "typescript.format.placeOpenBraceOnNewLineForControlBlocks": true,
     "typescript.format.placeOpenBraceOnNewLineForFunctions": true,
+    "typescript.tsdk": "node_modules\\typescript\\lib",
 
     "files.exclude": {
         "out": false // set this to true to hide the "out" folder with the compiled JS files
