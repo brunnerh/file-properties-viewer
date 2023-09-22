@@ -7,19 +7,21 @@ import { promisify } from 'util';
 import * as vscode from "vscode";
 import { Uri } from 'vscode';
 import { parseString as parseXML } from "xml2js";
-import { Config } from "./config-interface";
+import { Config, SizeMode } from "./config-interface";
 import { html, HtmlValue, raw } from "./html";
 import { icons } from "./icons";
 import { MediaInfoContainer } from "./media-info";
 import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
-const prettyBytes: (size: number) => string = require("pretty-bytes");
 
 export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 {
 	const { path, directory, name, stats } = await baseData(uri);
 
-	// Byte size redundant for sizes < 1000;
-	const exactSize = stats.size >= 1000 ? ` (${stats.size} B)` : '';
+	// Byte size redundant for sizes < unit factor
+	const sizeMode = Config.section.get('sizeMode');
+	const exactSize = stats.size >= factorFor(sizeMode) ?
+		` (${stats.size.toLocaleString()} B)` :
+		'';
 
 	const copyIcon = await icons.copy;
 	const editIcon = await icons.edit;
@@ -76,7 +78,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
 		directory != null ? new PropertyRow('Directory', cellWithButtons(externalLink(directory), copyButton(directory))) : null,
 		new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
-		new PropertyRow('Size', prettyBytes(stats.size) + exactSize),
+		new PropertyRow('Size', formatBytes(stats.size, sizeMode) + exactSize),
 		stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
 		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
 		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)) : null,
@@ -344,6 +346,38 @@ export async function onViewMessage(message: ViewMessage)
 }
 
 // #region Utilities
+
+function formatBytes(size: number, mode: SizeMode)
+{
+	const factor = factorFor(mode);
+	const sizes = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'];
+
+	let result = size;
+	let i = 0;
+	while (result >= factor && i < sizes.length - 1)
+	{
+		result /= factor;
+		i++;
+	}
+
+	const formatted = result.toLocaleString(undefined, { maximumFractionDigits: 3 });
+	const modeSuffix = mode == 'kibi' ? 'i' : '';
+
+	return `${formatted} ${sizes[i]}${modeSuffix}B`;
+}
+
+function factorFor(mode: SizeMode)
+{
+	const factor = {
+		'kilo': 1000,
+		'kibi': 1024,
+	}[mode];
+
+	if (factor == null)
+		throw new Error(`Unknown size mode: ${mode}`);
+
+	return factor;
+}
 
 /**
  * Extracts and formats permissions from file mode.  

@@ -12,8 +12,11 @@ export class Config
 
 interface TypedConfig
 {
+	get(item: 'sizeMode'): SizeMode;
 	get(item: 'dateTimeFormat'): string | null;
 	get(item: 'queryMediaInfo'): boolean;
 	get(item: 'outputStylePath'): string | null;
 	get(item: 'disableRelativeTimestamps'): boolean;
 }
+
+export type SizeMode = 'kilo' | 'kibi';
