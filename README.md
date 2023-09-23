@@ -32,12 +32,13 @@ If the applications are available in the `PATH`, they will be called unless they
 
 ## Extension Settings
 
-This extension has the following settings:
+This extension has the following settings (`filePropertiesViewer.<setting>`):
 
-- `filePropertiesViewer.dateTimeFormat`: Sets a custom date/time format for the timestamps.
-- `filePropertiesViewer.disableRelativeTimestamps`: Turns off relative timestamp display. 
-- `filePropertiesViewer.queryMediaInfo`: Whether media information via mediainfo should be requested.
-- `filePropertiesViewer.outputStylePath`: Sets a path to a CSS file used for styling the output table.  
+- `sizeMode`: Whether to show file sizes in kibi (factor 1024) or kilo (factor 1000).
+- `dateTimeFormat`: Sets a custom date/time format for the timestamps.
+- `disableRelativeTimestamps`: Turns off relative timestamp display. 
+- `queryMediaInfo`: Whether media information via mediainfo should be requested.
+- `outputStylePath`: Sets a path to a CSS file used for styling the output table.  
   The default style can be found [here](./styles/default.css).  
   The following classes are used within the table:
   - `icon-button`: Used on the edit and copy buttons. Has an `svg` as immediate child.
