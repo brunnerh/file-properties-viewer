@@ -6,11 +6,9 @@ This is an extension for [Visual Studio Code](https://code.visualstudio.com/) wh
 
 ### View
 
-The view can by default be found in the "Explorer" section of the side bar. It can be dragged to its own section, the bottom panel or the side panel. This view updates as the opened editor changes.
+The view can by default be found in the "Explorer" section of the side bar. It can be dragged to its own section, the bottom panel or the side panel. This view updates as the opened file changes.
 
 ![Example view](./readme-files/example-view.png)
-
-Currently the view only handles text documents, whereas the command can be used on different file types as well.
 
 ### Command
 

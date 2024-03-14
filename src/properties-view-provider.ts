@@ -1,7 +1,7 @@
 import { execFile } from "child_process";
-import * as dateformat from "dateformat";
+import dateformat from "dateformat";
 import * as fs from "fs";
-import * as mime from 'mime';
+import mime from 'mime';
 import { basename, dirname, join } from "path";
 import { promisify } from 'util';
 import * as vscode from "vscode";
@@ -375,9 +375,10 @@ function formatBytes(size: number, mode: SizeMode)
 	}
 
 	const formatted = result.toLocaleString(undefined, { maximumFractionDigits: 3 });
-	const modeSuffix = mode == 'kibi' ? 'i' : '';
+	const prefix = sizes[i];
+	const modeSuffix = mode == 'kibi' && prefix != '' ? 'i' : '';
 
-	return `${formatted} ${sizes[i]}${modeSuffix}B`;
+	return `${formatted} ${prefix}${modeSuffix}B`;
 }
 
 function factorFor(mode: SizeMode)

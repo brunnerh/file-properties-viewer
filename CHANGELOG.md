@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.2.0] - 2024-03-14
+
+- Added:
+  - View can now show data for non-text files.
+  - Hover on row highlights the row.
+- Fixed:
+  - Bytes no longer show `i` prefix in kibi size mode (e.g. `5 iB` => `5 B`).
+  - Make lines between rows less distracting by reducing their opacity.
+
 ## [1.1.0] - 2023-09-22
 
 - Added:

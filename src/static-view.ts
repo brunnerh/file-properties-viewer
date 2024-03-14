@@ -36,7 +36,7 @@ export class StaticViewProvider implements WebviewViewProvider
 		};
 		webview.onDidReceiveMessage(onViewMessage);
 
-		this.updatePanel(window.activeTextEditor?.document);
+		this.updatePanel();
 
 		const tokens = [
 			webviewView.onDidChangeVisibility(() =>
@@ -44,8 +44,9 @@ export class StaticViewProvider implements WebviewViewProvider
 				if (webviewView.visible)
 					this.updatePanel();
 			}),
-			window.onDidChangeActiveTextEditor(e => this.updatePanel(e?.document)),
-			workspace.onDidSaveTextDocument(() => this.updatePanel(window.activeTextEditor?.document)),
+			window.tabGroups.onDidChangeTabs(() => this.updatePanel()),
+			window.tabGroups.onDidChangeTabGroups(() => this.updatePanel()),
+			workspace.onDidSaveTextDocument(e => this.updatePanel(e.uri)),
 			workspace.onDidChangeConfiguration(e => this.configurationChanged(e)),
 		];
 
@@ -55,20 +56,54 @@ export class StaticViewProvider implements WebviewViewProvider
 	private configurationChanged(e: ConfigurationChangeEvent)
 	{
 		if (e.affectsConfiguration(sectionName))
-			this.updatePanel(window.activeTextEditor?.document);
+			this.updatePanel();
 	}
+
+	private updateCount = 0;
 
 	/**
 	 * If a text editor is active, the view is updated according to its selection.
 	 */
-	private async updatePanel(document?: TextDocument)
+	private updatePanel(uri?: Uri)
 	{
 		if (this.view === undefined)
 			return;
 
-		const uri = document === undefined ? null : document.uri;
-		this.view.webview.html = uri == null ?
-			'<p>Open a saved text file to view properties.</p>' :
-			await provideViewHtml('static', uri);
+		uri = uri ?? getCurrentUri();
+
+		const getHtml = async () =>
+		{
+			if (uri == null || uri.scheme != 'file')
+				return '<p>Open a saved file to view properties.</p>';
+
+			try
+			{
+				return await provideViewHtml('static', uri);
+			}
+			catch
+			{
+				return '<p>Failed to determine file properties.</p>';
+			}
+		};
+
+		const currentUpdate = ++this.updateCount;
+		getHtml().then(
+			html =>
+			{
+				if (this.view == null || this.updateCount !== currentUpdate)
+					return;
+			
+				this.view.webview.html = html;
+			}
+		);
 	}
+}
+
+
+function getCurrentUri(): Uri | undefined
+{
+	const input = window.tabGroups.activeTabGroup.activeTab?.input ?? {};
+	const { uri } = input as any;
+
+	return uri;
 }

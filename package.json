@@ -2,7 +2,7 @@
     "name": "file-properties-viewer",
     "displayName": "File Properties Viewer",
     "description": "Shows file properties like size, various time stamps and media type.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "publisher": "brunnerh",
     "license": "MIT",
     "icon": "icon/icon.png",
@@ -12,7 +12,7 @@
         "url": "https://github.com/brunnerh/file-properties-viewer.git"
     },
     "engines": {
-        "vscode": "^1.75.0"
+        "vscode": "^1.87.0"
     },
     "categories": [
         "Other"
@@ -109,26 +109,28 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "test": "npm run compile && node out/test/index.js",
+        "compile": "vite build",
+        "watch": "vite build --watch",
+        "test": "npm run compile && vscode-test",
         "minify:images": "pushd images; ./minify.sh; popd"
     },
     "devDependencies": {
-        "@types/dateformat": "^3.0.1",
-        "@types/mime": "^2.0.1",
+        "@types/dateformat": "^5.0.2",
+        "@types/mime": "^3.0.4",
+        "@types/mocha": "^9.1.0",
         "@types/node": "^18",
         "@types/vscode": "^1.75.0",
         "@types/xml2js": "^0.4.2",
-        "@vscode/test-electron": "^2.1.2",
-        "mocha": "9.2.0",
+        "@vscode/test-cli": "^0.0.8",
+        "@vscode/test-electron": "^2.3.9",
+        "mocha": "10.3.0",
         "svgo": "^2.8.0",
-        "typescript": "5"
+        "typescript": "5",
+        "vite": "^5.1.6"
     },
     "dependencies": {
-        "@types/mocha": "^9.1.0",
-        "dateformat": "4",
-        "mime": "^3.0.0",
+        "dateformat": "5.0.3",
+        "mime": "^4.0.1",
         "xml2js": "^0.6.2"
     }
 }
