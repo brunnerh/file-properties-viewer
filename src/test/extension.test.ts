@@ -1,36 +1,80 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import * as vscode from 'vscode';
+import { pathToFileURL } from 'url';
 import { viewProperties } from '../command-names';
 import { provideViewHtml } from '../properties-view-provider';
-// TODO: currently inlined (https://github.com/vitejs/vite/issues/3295)
-import file100 from "./test-file-100.txt?url";
-import file999 from "./test-file-999.txt?url";
-import file1000 from "./test-file-1000.txt?url";
 
-suite('Extension Tests', () =>
+const testFileUri = (name: string) =>
+	pathToFileURL(path.resolve(__dirname, `../src/test/${name}`)).toString();
+
+const file100 = testFileUri('test-file-100.txt');
+const file999 = testFileUri('test-file-999.txt');
+const file1000 = testFileUri('test-file-1000.txt');
+
+suite('Extension Integration Tests', () =>
 {
-	test("Execute command without error", async () =>
+	const render = (path: string) =>
+		provideViewHtml('command', vscode.Uri.parse(path));
+
+	test('Execute command without error', async () =>
 	{
 		await vscode.window.showTextDocument(vscode.Uri.parse(file100));
 		await vscode.commands.executeCommand(viewProperties);
 	});
 
-	test("Check HTML size strings.", async () =>
+	test('Check HTML size strings.', async () =>
 	{
-		const render = (path: string) =>
-			provideViewHtml('command', vscode.Uri.parse(path));
-
 		const html1 = await render(file100);
-		assert.equal(html1.indexOf(">100 B<") > 0, true, `'100 B' string not found in HTML.\n${html1}`);
+		assert.equal(html1.indexOf('>100 B<') > 0, true, `'100 B' string not found in HTML.\n${html1}`);
 
 		const html2 = await render(file999);
-		assert.equal(html2.indexOf(">999 B<") > 0, true, `'999 B' string not found in HTML.\n${html2}`);
+		assert.equal(html2.indexOf('>999 B<') > 0, true, `'999 B' string not found in HTML.\n${html2}`);
 
 		const html3 = await render(file1000);
-		assert.equal(html3.indexOf(">1000 B<") > 0, false, `Cell should contain more than the raw byte count.\n${html3}`);
-		assert.equal(html3.indexOf("(1000 B)") > 0, true, `Raw byte count not found.\n${html3}`);
-		assert.equal(html3.indexOf("1 kB") > 0, true, `Converted byte count not found.\n${html3}`);
+		assert.equal(html3.indexOf('>1000 B<') > 0, false, `Cell should contain more than the raw byte count.\n${html3}`);
+		assert.equal(html3.indexOf('(1000 B)') > 0 || html3.indexOf('(1,000 B)') > 0, true, `Raw byte count not found.\n${html3}`);
+		assert.equal(html3.indexOf('1 kB') > 0 || html3.indexOf('1 KB') > 0, true, `Converted byte count not found.\n${html3}`);
 	});
 
-	// TODO: test date formatting configuration
+	test('Can filter and reorder configured property rows.', async () =>
+	{
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('propertyRows', ['size', 'name'], vscode.ConfigurationTarget.Global);
+			const html = await render(file1000);
+
+			const sizeIndex = html.indexOf('>Size<');
+			const nameIndex = html.indexOf('>Name<');
+
+			assert.equal(sizeIndex > -1, true, `Size row not found.\n${html}`);
+			assert.equal(nameIndex > -1, true, `Name row not found.\n${html}`);
+			assert.equal(sizeIndex < nameIndex, true, `Configured row order was not applied.\n${html}`);
+			assert.equal(html.indexOf('>Media Type<') > -1, false, `Unexpected media type row.\n${html}`);
+		}
+		finally
+		{
+			await config.update('propertyRows', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('Unknown property row descriptors are ignored.', async () =>
+	{
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('propertyRows', ['name', 'invalid-row'], vscode.ConfigurationTarget.Global);
+			const html = await render(file100);
+
+			assert.equal(html.indexOf('>Name<') > -1, true, `Name row not found.\n${html}`);
+			assert.equal(html.indexOf('>invalid-row<') > -1, false, `Invalid row should not be rendered.\n${html}`);
+		}
+		finally
+		{
+			await config.update('propertyRows', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
 });

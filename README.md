@@ -36,6 +36,7 @@ This extension has the following settings (`filePropertiesViewer.<setting>`):
 - `dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `disableRelativeTimestamps`: Turns off relative timestamp display. 
 - `queryMediaInfo`: Whether media information via mediainfo should be requested.
+- `propertyRows`: Configures which top-level property rows are shown and in which order.
 - `outputStylePath`: Sets a path to a CSS file used for styling the output table.  
   The default style can be found [here](./styles/default.css).  
   The following classes are used within the table:

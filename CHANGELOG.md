@@ -1,5 +1,10 @@
 # Change Log
 
+## [unreleased]
+
+- Added:
+  - Setting for hiding and reordering property rows (`propertyRows`).
+
 ## [1.2.0] - 2024-03-14
 
 - Added:

@@ -75,6 +75,39 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Turns off relative timestamp display."
+                },
+                "filePropertiesViewer.propertyRows": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "name",
+                            "directory",
+                            "fullPath",
+                            "realPath",
+                            "size",
+                            "created",
+                            "changed",
+                            "modified",
+                            "accessed",
+                            "permissions",
+                            "mediaType"
+                        ]
+                    },
+                    "default": [
+                        "name",
+                        "directory",
+                        "fullPath",
+                        "realPath",
+                        "size",
+                        "created",
+                        "changed",
+                        "modified",
+                        "accessed",
+                        "permissions",
+                        "mediaType"
+                    ],
+                    "description": "Configures which top-level property rows are shown and in which order."
                 }
             }
         },
@@ -111,24 +144,26 @@
         "vscode:prepublish": "npm run compile",
         "compile": "vite build",
         "watch": "vite build --watch",
-        "test": "npm run compile && vscode-test",
+        "test": "npm run test:unit && npm run test:integration",
+        "test:unit": "vitest run",
+        "test:integration": "npm run compile && vscode-test",
+        "test:watch": "vitest",
         "minify:images": "pushd images; ./minify.sh; popd"
     },
     "devDependencies": {
         "@types/dateformat": "^5.0.2",
         "@types/mime": "^3.0.4",
-        "@types/mocha": "^9.1.0",
         "@types/node": "^18",
         "@types/vscode": "^1.75.0",
         "@types/xml2js": "^0.4.2",
         "@vscode/test-cli": "^0.0.8",
-        "@vscode/test-electron": "^2.3.9",
+        "@vscode/test-electron": "^2.5.2",
         "dateformat": "5.0.3",
-        "mime": "^4.0.1",
-        "mocha": "10.3.0",
+        "mime": "^4.1.0",
         "svgo": "^2.8.0",
         "typescript": "5",
-        "vite": "^5.1.7",
+        "vite": "^7.3.1",
+        "vitest": "^4.0.18",
         "xml2js": "^0.6.2"
     },
     "dependencies": {}

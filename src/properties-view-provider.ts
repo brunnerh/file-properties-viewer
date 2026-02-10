@@ -7,7 +7,7 @@ import { promisify } from 'util';
 import * as vscode from "vscode";
 import { Uri } from 'vscode';
 import { parseString as parseXML } from "xml2js";
-import { Config, SizeMode } from "./config-interface";
+import { Config, type PropertyRowType, SizeMode } from './config-interface';
 import { html, HtmlValue, raw } from "./html";
 import { icons } from "./icons";
 import { MediaInfoContainer } from "./media-info";
@@ -74,29 +74,50 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		return html`<span title="${title}">${formatPermissions(mode)}</span>`;
 	};
 
-	const rows: TableRow[] = [
-		new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
-		directory != null ?
-			new PropertyRow('Directory', cellWithButtons(
-				externalLink(directory),
-				copyButton(directory),
-			)) : null,
-		new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
-		realPath != null && uri.toString() != realPath.toString() ?
-			new PropertyRow('Real Path', cellWithButtons(
-				externalLink(realPath),
-				editButton(realPath),
-				copyButton(realPath),
-			)) : null,
-		new PropertyRow('Size', formatBytes(stats.size, sizeMode) + exactSize),
-		stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
-		stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
-		stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)) : null,
-		stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)) : null,
-		stats.mode != null ? new PropertyRow('Permissions', permissions(stats.mode)) : null,
-	].filter(r => r != null) as TableRow[];
+	const rowFactories: Record<PropertyRowType, () => TableRow | null> = {
+		name: () => new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
+		directory: () =>
+			directory != null ?
+				new PropertyRow('Directory', cellWithButtons(
+					externalLink(directory),
+					copyButton(directory),
+				)) :
+				null,
+		fullPath: () => new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
+		realPath: () =>
+			realPath != null && uri.toString() != realPath.toString() ?
+				new PropertyRow('Real Path', cellWithButtons(
+					externalLink(realPath),
+					editButton(realPath),
+					copyButton(realPath),
+				)) :
+				null,
+		size: () => new PropertyRow('Size', formatBytes(stats.size, sizeMode) + exactSize),
+		created: () => stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
+		changed: () => stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
+		modified: () => stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)) : null,
+		accessed: () => stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)) : null,
+		permissions: () => stats.mode != null ? new PropertyRow('Permissions', permissions(stats.mode)) : null,
+		mediaType: () => {
+			const type = mime.getType(path) ?? '[unknown]';
+			return new PropertyRow('Media Type', type);
+		},
+	};
 
-	addMediaType(path, rows);
+	const configuredRows = Config.section.get('propertyRows') ?? [];
+	const rows: TableRow[] = [];
+
+	for (const descriptor of configuredRows)
+	{
+		const factory = rowFactories[descriptor as PropertyRowType];
+		if (factory == null)
+			continue;
+
+		const row = factory();
+		if (row != null)
+			rows.push(row);
+	}
+
 	await addMediaInfo(path, rows);
 
 	const defaultStylePath = join(__dirname, '../styles/default.css');
@@ -237,12 +258,6 @@ interface BaseData
 		accessed: Date | null,
 		mode: number | null,
 	}
-}
-
-function addMediaType(path: string, rows: TableRow[])
-{
-	const type = mime.getType(path) ?? '[unknown]';
-	rows.push(new PropertyRow('Media Type', type));
 }
 
 async function addMediaInfo(path: string, rows: TableRow[])
