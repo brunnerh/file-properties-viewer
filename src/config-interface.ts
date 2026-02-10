@@ -12,6 +12,7 @@ export const propertyRows = [
 	'changed',
 	'modified',
 	'accessed',
+	'owner',
 	'permissions',
 	'mediaType',
 ] as const;

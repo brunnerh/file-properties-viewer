@@ -11,6 +11,7 @@ const defaultRows = [
 	'changed',
 	'modified',
 	'accessed',
+	'owner',
 	'permissions',
 	'mediaType',
 ];
@@ -30,6 +31,43 @@ vi.mock('../icons', () => ({
 	icons: {
 		copy: Promise.resolve('<svg/>'),
 		edit: Promise.resolve('<svg/>'),
+	},
+}));
+
+vi.mock('child_process', () => ({
+	execFile(
+		path: string,
+		args: string[],
+		optionsOrCb: unknown,
+		maybeCb?: (error: Error | null, stdout: string) => void,
+	)
+	{
+		const cb = typeof optionsOrCb == 'function' ?
+			optionsOrCb as (error: Error | null, stdout: string) => void :
+			maybeCb;
+
+		if (cb == null)
+			throw new Error('Missing callback in execFile mock.');
+
+		if (path == 'stat')
+		{
+			if (args.includes('%U') || args.includes('%Su'))
+			{
+				cb(null, 'test-user\n');
+				return;
+			}
+
+			if (args.includes('%G') || args.includes('%Sg'))
+			{
+				cb(null, 'test-group\n');
+				return;
+			}
+
+			cb(new Error(`Unsupported stat args: ${args.join(' ')}`), '');
+			return;
+		}
+
+		cb(new Error(`Unsupported executable: ${path}`), '');
 	},
 }));
 
@@ -92,13 +130,14 @@ vi.mock('vscode', () =>
 });
 
 import { Uri } from 'vscode';
-import { provideViewHtml } from '../properties-view-provider';
+import { provideViewContent } from '../properties-view-provider';
 
 const file100 = fileURLToPath(new URL('./test-file-100.txt', import.meta.url));
 const file999 = fileURLToPath(new URL('./test-file-999.txt', import.meta.url));
 const file1000 = fileURLToPath(new URL('./test-file-1000.txt', import.meta.url));
 
-const render = (path: string) => provideViewHtml('command', Uri.file(path));
+const render = async (path: string) =>
+	(await provideViewContent('command', Uri.file(path), 0)).html;
 
 describe('Extension Unit Tests', () =>
 {
@@ -125,6 +164,26 @@ describe('Extension Unit Tests', () =>
 
 		expect(html).toContain('<table class="zebra-stripes"');
 		expect(html).toContain('--zebra-stripe-background: rgba(255, 255, 255, 0.2);');
+	});
+
+	test('owner row initially renders async placeholder', async () =>
+	{
+		configValues.propertyRows = ['owner'];
+		const html = await render(file100);
+
+		expect(html).toContain('>Owner<');
+		expect(html).toContain('data-type="owner"');
+		expect(html).toContain('data-async-id="owner-1"');
+		expect(html).toContain('>...<');
+	});
+
+	test('owner row async update resolves to user and group on POSIX', async () =>
+	{
+		configValues.propertyRows = ['owner'];
+		const content = await provideViewContent('command', Uri.file(file100), 1);
+
+		expect(content.pendingUpdates.length).toBe(1);
+		await expect(content.pendingUpdates[0].promise).resolves.toBe('test-user (test-group)');
 	});
 
 	test('can hide header visually while keeping it in markup', async () =>

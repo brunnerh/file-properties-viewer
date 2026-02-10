@@ -103,6 +103,7 @@
                             "changed",
                             "modified",
                             "accessed",
+                            "owner",
                             "permissions",
                             "mediaType"
                         ]
@@ -117,6 +118,7 @@
                         "changed",
                         "modified",
                         "accessed",
+                        "owner",
                         "permissions",
                         "mediaType"
                     ],

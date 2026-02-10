@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+import { execFile, type ExecFileOptions } from "child_process";
 import dateformat from "dateformat";
 import * as fs from "fs";
 import mime from 'mime';
@@ -13,7 +13,11 @@ import { icons } from "./icons";
 import { MediaInfoContainer } from "./media-info";
 import { GroupRow, PropertyRow, SubGroupRow, TableRow } from "./table-row";
 
-export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
+export async function provideViewContent(
+	view: 'command' | 'static',
+	uri: Uri,
+	renderId: number,
+): Promise<ViewContent>
 {
 	const { path, directory, name, realPath, stats } = await baseData(uri);
 
@@ -74,38 +78,96 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		return html`<span title="${title}">${formatPermissions(mode)}</span>`;
 	};
 
-	const rowFactories: Record<PropertyRowType, () => TableRow | null> = {
-		name: () => new PropertyRow('Name', cellWithButtons(name, editButton(uri), copyButton(name))),
+	let asyncRowCounter = 0;
+
+	const rowFactories: Record<PropertyRowType, () => RowDefinition | AsyncRowDefinition | null> = {
+		name: () => ({
+			rowType: 'name',
+			key: 'Name',
+			value: cellWithButtons(name, editButton(uri), copyButton(name)),
+		}),
 		directory: () =>
 			directory != null ?
-				new PropertyRow('Directory', cellWithButtons(
-					externalLink(directory),
-					copyButton(directory),
-				)) :
+				{
+					rowType: 'directory',
+					key: 'Directory',
+					value: cellWithButtons(
+						externalLink(directory),
+						copyButton(directory),
+					),
+				} :
 				null,
-		fullPath: () => new PropertyRow('Full Path', cellWithButtons(externalLink(uri), copyButton(uri))),
+		fullPath: () => ({
+			rowType: 'fullPath',
+			key: 'Full Path',
+			value: cellWithButtons(externalLink(uri), copyButton(uri)),
+		}),
 		realPath: () =>
 			realPath != null && uri.toString() != realPath.toString() ?
-				new PropertyRow('Real Path', cellWithButtons(
-					externalLink(realPath),
-					editButton(realPath),
-					copyButton(realPath),
-				)) :
+				{
+					rowType: 'realPath',
+					key: 'Real Path',
+					value: cellWithButtons(
+						externalLink(realPath),
+						editButton(realPath),
+						copyButton(realPath),
+					),
+				} :
 				null,
-		size: () => new PropertyRow('Size', formatBytes(stats.size, sizeMode) + exactSize),
-		created: () => stats.created ? new PropertyRow('Created', formatDate(stats.created)) : null,
-		changed: () => stats.changed ? new PropertyRow('Changed', formatDate(stats.changed)) : null,
-		modified: () => stats.modified ? new PropertyRow('Modified', formatDate(stats.modified)) : null,
-		accessed: () => stats.accessed ? new PropertyRow('Accessed', formatDate(stats.accessed)) : null,
-		permissions: () => stats.mode != null ? new PropertyRow('Permissions', permissions(stats.mode)) : null,
-		mediaType: () => {
-			const type = mime.getType(path) ?? '[unknown]';
-			return new PropertyRow('Media Type', type);
+		size: () => ({
+			rowType: 'size',
+			key: 'Size',
+			value: formatBytes(stats.size, sizeMode) + exactSize,
+		}),
+		created: () => stats.created ? {
+			rowType: 'created',
+			key: 'Created',
+			value: formatDate(stats.created),
+		} : null,
+		changed: () => stats.changed ? {
+			rowType: 'changed',
+			key: 'Changed',
+			value: formatDate(stats.changed),
+		} : null,
+		modified: () => stats.modified ? {
+			rowType: 'modified',
+			key: 'Modified',
+			value: formatDate(stats.modified),
+		} : null,
+		accessed: () => stats.accessed ? {
+			rowType: 'accessed',
+			key: 'Accessed',
+			value: formatDate(stats.accessed),
+		} : null,
+		owner: () =>
+		{
+			const asyncId = `owner-${++asyncRowCounter}`;
+			const promise = resolveOwner(path, stats.uid, stats.gid)
+				.then(owner => owner ?? '[error]');
+
+			return {
+				rowType: 'owner',
+				key: 'Owner',
+				asyncId,
+				promise,
+				placeholder: '...',
+			};
 		},
+		permissions: () => stats.mode != null ? {
+			rowType: 'permissions',
+			key: 'Permissions',
+			value: permissions(stats.mode),
+		} : null,
+		mediaType: () => ({
+			rowType: 'mediaType',
+			key: 'Media Type',
+			value: mime.getType(path) ?? '[unknown]',
+		}),
 	};
 
 	const configuredRows = Config.section.get('propertyRows') ?? [];
 	const rows: TableRow[] = [];
+	const pendingUpdates: PendingRowUpdate[] = [];
 
 	for (const descriptor of configuredRows)
 	{
@@ -114,8 +176,33 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 			continue;
 
 		const row = factory();
-		if (row != null)
-			rows.push(row);
+		if (row == null)
+			continue;
+
+		if ('promise' in row)
+		{
+			rows.push(new PropertyRow({
+				dataType: row.rowType,
+				key: row.key,
+				value: row.placeholder,
+				asyncId: row.asyncId,
+			}));
+
+			pendingUpdates.push({
+				renderId,
+				rowType: row.rowType,
+				asyncId: row.asyncId,
+				promise: row.promise,
+			});
+
+			continue;
+		}
+
+		rows.push(new PropertyRow({
+			dataType: row.rowType,
+			key: row.key,
+			value: row.value,
+		}));
 	}
 
 	await addMediaInfo(path, rows);
@@ -131,9 +218,9 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 	const style = (await promisify(fs.readFile)(stylePath ? stylePath : defaultStylePath))
 		.toString();
 
-	return html`
+	const content = html`
 		<!DOCTYPE html>
-		<html lang="en" data-view="${view}">
+		<html lang="en" data-view="${view}" data-render-id="${renderId}">
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -157,6 +244,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 			(() =>
 			{
 				const vscode = acquireVsCodeApi();
+				const renderId = ${renderId};
 
 				function copyTextToClipboard(text)
 				{
@@ -192,6 +280,28 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 					vscode.postMessage(data);
 				}
 
+				window.addEventListener('message', event =>
+				{
+					const message = event.data;
+					if (message?.command != 'row-update')
+						return;
+
+					if (message.renderId != renderId)
+						return;
+
+					const selector =
+						'tr.property-row' +
+						'[data-async-id="' + message.asyncId + '"]' +
+						'[data-type="' + message.rowType + '"]' +
+						' .value-cell';
+
+					const cell = document.querySelector(selector);
+					if (cell == null)
+						return;
+
+					cell.textContent = message.value;
+				});
+
 				Object.assign(window, { copyTextToClipboard, openFile, openExternal, post });
 			})();
 			</script>
@@ -213,7 +323,44 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 			</script>
 		</body>
 		</html>
+
 	`.content;
+
+	return {
+		html: content,
+		pendingUpdates,
+	};
+}
+
+export function dispatchPendingRowUpdates(
+	webview: vscode.Webview,
+	pendingUpdates: PendingRowUpdate[],
+	isCurrentRender: (renderId: number) => boolean,
+)
+{
+	for (const update of pendingUpdates)
+	{
+		update.promise
+			.then(value => conditionalPost(value))
+			.catch(error =>
+			{
+				console.error('Failed to resolve async row update.', error);
+				conditionalPost('[error]');
+			});
+
+		function conditionalPost(value: string) {
+			if (isCurrentRender(update.renderId) == false)
+				return;
+
+			webview.postMessage({
+				command: 'row-update',
+				renderId: update.renderId,
+				rowType: update.rowType,
+				asyncId: update.asyncId,
+				value,
+			});
+		}
+	}
 }
 
 async function baseData(uri: Uri): Promise<BaseData>
@@ -225,7 +372,7 @@ async function baseData(uri: Uri): Promise<BaseData>
 		const directory = Uri.file(dirname(path));
 		// bigint throws on format later
 		const stats = await promisify(fs.stat)(path);
-		const { size, birthtime, ctime, mtime, atime, mode } = stats;
+		const { size, birthtime, ctime, mtime, atime, mode, uid, gid } = stats;
 		const realPath = Uri.file(await promisify(fs.realpath)(path));
 
 		return {
@@ -237,6 +384,8 @@ async function baseData(uri: Uri): Promise<BaseData>
 				modified: mtime,
 				accessed: atime,
 				mode,
+				uid,
+				gid,
 			},
 		};
 	}
@@ -257,6 +406,8 @@ async function baseData(uri: Uri): Promise<BaseData>
 				modified: mtime <= 0 ? null : new Date(mtime),
 				accessed: null,
 				mode: null,
+				uid: null,
+				gid: null,
 			},
 		};
 	}
@@ -275,6 +426,8 @@ interface BaseData
 		modified: Date | null,
 		accessed: Date | null,
 		mode: number | null,
+		uid: number | null,
+		gid: number | null,
 	}
 }
 
@@ -311,7 +464,11 @@ async function addMediaInfo(path: string, rows: TableRow[])
 									return;
 								}
 							}
-							rows.push(new PropertyRow(label, value, level + 1));
+							rows.push(new PropertyRow({
+								key: label,
+								value,
+								indent: level + 1,
+							}));
 						}
 					});
 			};
@@ -345,7 +502,35 @@ export async function viewPropertiesCommand(uri?: Uri)
 		}
 	);
 
-	panel.webview.html = await provideViewHtml('command', finalUri);
+	let updateCount = 0;
+	let disposed = false;
+
+	const updateView = async () =>
+	{
+		const currentUpdate = ++updateCount;
+
+		try
+		{
+			const viewContent = await provideViewContent('command', finalUri, currentUpdate);
+
+			if (disposed || currentUpdate != updateCount)
+				return;
+
+			panel.webview.html = viewContent.html;
+			dispatchPendingRowUpdates(
+				panel.webview,
+				viewContent.pendingUpdates,
+				renderId => disposed == false && renderId == updateCount,
+			);
+		}
+		catch
+		{
+			if (disposed == false && currentUpdate == updateCount)
+				panel.webview.html = '<p>Failed to determine file properties.</p>';
+		}
+	};
+
+	await updateView();
 
 	panel.webview.onDidReceiveMessage(onViewMessage);
 
@@ -353,15 +538,19 @@ export async function viewPropertiesCommand(uri?: Uri)
 		vscode.workspace.onDidSaveTextDocument(async e =>
 		{
 			if (e.uri.toString() == finalUri.toString())
-				panel.webview.html = await provideViewHtml('command', finalUri);
+				updateView();
 		}),
 		vscode.workspace.onDidChangeConfiguration(async () =>
 		{
-			panel.webview.html = await provideViewHtml('command', finalUri);
+			updateView();
 		}),
 	];
 
-	panel.onDidDispose(() => updateHandlers.forEach(h => h.dispose()));
+	panel.onDidDispose(() =>
+	{
+		disposed = true;
+		updateHandlers.forEach(h => h.dispose());
+	});
 }
 
 export async function onViewMessage(message: ViewMessage)
@@ -375,10 +564,12 @@ export async function onViewMessage(message: ViewMessage)
 				const document = await vscode.workspace.openTextDocument(uri);
 				await vscode.window.showTextDocument(document);
 				break;
+
 			case 'open-external':
 				const extUri = Uri.parse(message.uri);
 				await vscode.env.openExternal(extUri);
 				break;
+
 			case 'log':
 				console.log(message.data);
 				break;
@@ -393,6 +584,69 @@ export async function onViewMessage(message: ViewMessage)
 }
 
 // #region Utilities
+
+async function resolveOwner(path: string, uid: number | null, gid: number | null)
+{
+	if (process.platform == 'win32')
+		return resolveWindowsOwner(path);
+
+	if (uid == null || gid == null)
+		return null;
+
+	return resolveUnixLikeOwner(path, uid, gid);
+}
+
+async function resolveWindowsOwner(path: string)
+{
+	try
+	{
+		const owner = await exec('powershell', [
+			'-NoProfile',
+			'-NonInteractive',
+			'-Command',
+			'(Get-Acl -LiteralPath $env:FPV_OWNER_PATH).Owner',
+		], {
+			env: {
+				...process.env,
+				FPV_OWNER_PATH: path,
+			},
+		});
+
+		const cleanOwner = owner.trim();
+
+		return cleanOwner == '' ? null : cleanOwner;
+	}
+	catch
+	{
+		return null;
+	}
+}
+
+async function resolveUnixLikeOwner(path: string, uid: number, gid: number)
+{
+	try
+	{
+		const ownerArgs = process.platform == 'darwin' ?
+			['-f', '%Su', path] :
+			['-c', '%U', path];
+		const groupArgs = process.platform == 'darwin' ?
+			['-f', '%Sg', path] :
+			['-c', '%G', path];
+
+		const [owner, group] = await Promise.all([
+			exec('stat', ownerArgs).then(x => x.trim()),
+			exec('stat', groupArgs).then(x => x.trim()),
+		]);
+
+		if (owner != null && owner != '' && group != null && group != '')
+			return `${owner} (${group})`;
+	}
+	catch
+	{
+	}
+
+	return `${uid} (${gid})`;
+}
 
 function formatBytes(size: number, mode: SizeMode)
 {
@@ -457,8 +711,8 @@ function formatPermissions(mode: number): string
 			(Object.entries(group) as [FlagKey, FlagSymbol][])
 				.map(([flag, char]) =>
 					flag in fs.constants == false ? '_' :
-					(mode & fs.constants[flag]) == 0 ? '-' :
-					char
+						(mode & fs.constants[flag]) == 0 ? '-' :
+							char
 				)
 				.join('')
 		)
@@ -519,11 +773,11 @@ function makePathBreakable(path: string): string
 	return path.replace(/([\/\\])/g, substr => `${substr}\u200B`);
 }
 
-function exec(path: string, args: string[])
+function exec(path: string, args: string[], options?: ExecFileOptions)
 {
 	return new Promise<string>((res, rej) =>
 	{
-		execFile(path, args, (error, stdout, stderr) =>
+		execFile(path, args, options ?? {}, (error, stdout, stderr) =>
 		{
 			if (error)
 				rej({ error, stderr });
@@ -538,6 +792,36 @@ type FlagSymbol = 'r' | 'w' | 'x';
 type FlagGroup = Partial<Record<FlagKey, FlagSymbol>>;
 
 // #endregion
+
+export interface PendingRowUpdate
+{
+	renderId: number;
+	rowType: PropertyRowType;
+	asyncId: string;
+	promise: Promise<string>;
+}
+
+export interface ViewContent
+{
+	html: string;
+	pendingUpdates: PendingRowUpdate[];
+}
+
+interface RowDefinition
+{
+	rowType: PropertyRowType;
+	key: string;
+	value: HtmlValue;
+}
+
+interface AsyncRowDefinition
+{
+	rowType: PropertyRowType;
+	key: string;
+	asyncId: string;
+	placeholder: string;
+	promise: Promise<string>;
+}
 
 interface OpenMessage
 {

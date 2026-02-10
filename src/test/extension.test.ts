@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { pathToFileURL } from 'url';
 import { viewProperties } from '../command-names';
-import { provideViewHtml } from '../properties-view-provider';
+import { provideViewContent } from '../properties-view-provider';
 
 const testFileUri = (name: string) =>
 	pathToFileURL(path.resolve(__dirname, `../src/test/${name}`)).toString();
@@ -15,7 +15,7 @@ const file1000 = testFileUri('test-file-1000.txt');
 suite('Extension Integration Tests', () =>
 {
 	const render = (path: string) =>
-		provideViewHtml('command', vscode.Uri.parse(path));
+		provideViewContent('command', vscode.Uri.parse(path), 0).then(x => x.html);
 
 	test('Execute command without error', async () =>
 	{
@@ -129,6 +129,28 @@ suite('Extension Integration Tests', () =>
 		finally
 		{
 			await config.update('zebraStripes', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('Can display owner row on POSIX systems.', async function()
+	{
+		if (process.platform == 'win32')
+			this.skip();
+
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('propertyRows', ['owner'], vscode.ConfigurationTarget.Global);
+			const html = await render(file100);
+
+			assert.equal(html.indexOf('>Owner<') > -1, true, `Owner row should be displayed.\n${html}`);
+			assert.equal(html.indexOf('data-type="owner"') > -1, true, `Owner row should contain async type metadata.\n${html}`);
+			assert.equal(html.indexOf('>...<') > -1, true, `Owner row should initially render placeholder value.\n${html}`);
+		}
+		finally
+		{
+			await config.update('propertyRows', undefined, vscode.ConfigurationTarget.Global);
 		}
 	});
 });

@@ -4,7 +4,7 @@ import
 	WebviewViewProvider, WebviewViewResolveContext, window, workspace
 } from 'vscode';
 import { sectionName } from './config-interface';
-import { onViewMessage, provideViewHtml } from './properties-view-provider';
+import { dispatchPendingRowUpdates, onViewMessage, provideViewContent } from './properties-view-provider';
 
 export class StaticViewProvider implements WebviewViewProvider
 {
@@ -71,34 +71,44 @@ export class StaticViewProvider implements WebviewViewProvider
 
 		uri = uri ?? getCurrentUri();
 
-		const getHtml = async () =>
+		const getViewContent = async () =>
 		{
 			if (uri == null || uri.scheme != 'file')
-				return '<p>Open a saved file to view properties.</p>';
+				return {
+					html: '<p>Open a saved file to view properties.</p>',
+					pendingUpdates: [],
+				};
 
 			try
 			{
-				return await provideViewHtml('static', uri);
+				return await provideViewContent('static', uri, currentUpdate);
 			}
 			catch
 			{
-				return '<p>Failed to determine file properties.</p>';
+				return {
+					html: '<p>Failed to determine file properties.</p>',
+					pendingUpdates: [],
+				};
 			}
 		};
 
 		const currentUpdate = ++this.updateCount;
-		getHtml().then(
-			html =>
+		getViewContent().then(
+			viewContent =>
 			{
 				if (this.view == null || this.updateCount !== currentUpdate)
 					return;
 			
-				this.view.webview.html = html;
+				this.view.webview.html = viewContent.html;
+				dispatchPendingRowUpdates(
+					this.view.webview,
+					viewContent.pendingUpdates,
+					renderId => this.view != null && renderId == this.updateCount,
+				);
 			}
 		);
 	}
 }
-
 
 function getCurrentUri(): Uri | undefined
 {
