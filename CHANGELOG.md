@@ -5,6 +5,7 @@
 - Added:
   - Setting for hiding and reordering property rows (`propertyRows`).
   - Setting for hiding the table header (`showHeader`).
+  - Setting for zebra striping on property rows (`zebraStripes`).
 
 ## [1.2.0] - 2024-03-14
 

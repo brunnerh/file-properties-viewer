@@ -36,6 +36,7 @@ This extension has the following settings (`filePropertiesViewer.<setting>`):
 - `dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `disableRelativeTimestamps`: Turns off relative timestamp display. 
 - `showHeader`: Controls whether the table header row is shown.
+- `zebraStripes`: Controls zebra striping for property rows. Set to `true` for theme-based striping, `false` to disable, or a CSS color string like `rgba(255, 255, 255, 0.04)`.
 - `queryMediaInfo`: Whether media information via mediainfo should be requested.
 - `propertyRows`: Configures which top-level property rows are shown and in which order.
 - `outputStylePath`: Sets a path to a CSS file used for styling the output table.  

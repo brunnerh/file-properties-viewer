@@ -123,6 +123,11 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 	const defaultStylePath = join(__dirname, '../styles/default.css');
 	const stylePath = Config.section.get('outputStylePath');
 	const showHeader = Config.section.get('showHeader');
+	const zebraStripes = Config.section.get('zebraStripes');
+	const zebraEnabled = zebraStripes !== false;
+	const zebraStyle = typeof zebraStripes == 'string' ?
+		`--zebra-stripe-background: ${zebraStripes};` :
+		'';
 	const style = (await promisify(fs.readFile)(stylePath ? stylePath : defaultStylePath))
 		.toString();
 
@@ -192,7 +197,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 			</script>
 		</head>
 		<body>
-			<table>
+			<table class="${zebraEnabled ? 'zebra-stripes' : ''}" style="${zebraStyle}">
 				<thead class="${showHeader ? '' : 'sr-only'}">
 					<tr class="column-header-row">
 						<th class="column-header-cell">Property</th>

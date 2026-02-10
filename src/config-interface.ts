@@ -34,6 +34,7 @@ interface TypedConfig
 	get(item: 'outputStylePath'): string | null;
 	get(item: 'disableRelativeTimestamps'): boolean;
 	get(item: 'showHeader'): boolean;
+	get(item: 'zebraStripes'): boolean | string;
 	get(item: 'propertyRows'): string[];
 }
 

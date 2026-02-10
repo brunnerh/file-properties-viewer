@@ -81,6 +81,14 @@
                     "default": true,
                     "description": "Controls whether the table header row is shown."
                 },
+                "filePropertiesViewer.zebraStripes": {
+                    "type": [
+                        "boolean",
+                        "string"
+                    ],
+                    "default": false,
+                    "description": "Controls zebra striping for property rows. Set to true for theme-based striping, false to disable, or provide a CSS color string."
+                },
                 "filePropertiesViewer.propertyRows": {
                     "type": "array",
                     "items": {

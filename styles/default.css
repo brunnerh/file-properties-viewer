@@ -3,6 +3,7 @@
 	--border-color: color-mix(in srgb, currentColor 20%, transparent);
 	--border: 1px solid var(--border-color);
 	--hover-background: color-mix(in srgb, currentColor 5%, transparent);
+	--zebra-stripe-background: color-mix(in srgb, currentColor 5%, transparent);
 }
 :root[data-view=static]
 {
@@ -44,6 +45,11 @@ tr:last-child th,
 tr:last-child td
 {
 	border-bottom: var(--border);
+}
+
+table.zebra-stripes .property-row:nth-child(even) td
+{
+	background: var(--zebra-stripe-background);
 }
 
 tbody tr:hover td

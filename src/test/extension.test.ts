@@ -96,4 +96,39 @@ suite('Extension Integration Tests', () =>
 			await config.update('showHeader', undefined, vscode.ConfigurationTarget.Global);
 		}
 	});
+
+	test('Can disable zebra striping.', async () =>
+	{
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('zebraStripes', false, vscode.ConfigurationTarget.Global);
+			const html = await render(file100);
+
+			assert.equal(html.indexOf('<table class="zebra-stripes"') > -1, false, `Zebra striping should be disabled.\n${html}`);
+		}
+		finally
+		{
+			await config.update('zebraStripes', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('Can set custom zebra stripe color.', async () =>
+	{
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('zebraStripes', 'rgba(255, 255, 255, 0.2)', vscode.ConfigurationTarget.Global);
+			const html = await render(file100);
+
+			assert.equal(html.indexOf('<table class="zebra-stripes"') > -1, true, `Zebra striping should be enabled.\n${html}`);
+			assert.equal(html.indexOf('--zebra-stripe-background: rgba(255, 255, 255, 0.2);') > -1, true, `Custom zebra stripe color should be applied.\n${html}`);
+		}
+		finally
+		{
+			await config.update('zebraStripes', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
 });

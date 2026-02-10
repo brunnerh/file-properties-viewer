@@ -22,6 +22,7 @@ const configValues: Record<string, unknown> = {
 	outputStylePath: null,
 	disableRelativeTimestamps: false,
 	showHeader: true,
+	zebraStripes: true,
 	propertyRows: defaultRows,
 };
 
@@ -106,6 +107,24 @@ describe('Extension Unit Tests', () =>
 		configValues.propertyRows = [...defaultRows];
 		configValues.queryMediaInfo = false;
 		configValues.showHeader = true;
+		configValues.zebraStripes = true;
+	});
+
+	test('zebra stripes can be disabled', async () =>
+	{
+		configValues.zebraStripes = false;
+		const html = await render(file100);
+
+		expect(html).not.toContain('<table class="zebra-stripes"');
+	});
+
+	test('zebra stripes can be configured with a custom CSS color', async () =>
+	{
+		configValues.zebraStripes = 'rgba(255, 255, 255, 0.2)';
+		const html = await render(file100);
+
+		expect(html).toContain('<table class="zebra-stripes"');
+		expect(html).toContain('--zebra-stripe-background: rgba(255, 255, 255, 0.2);');
 	});
 
 	test('can hide header visually while keeping it in markup', async () =>
