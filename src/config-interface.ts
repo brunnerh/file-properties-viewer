@@ -33,6 +33,7 @@ interface TypedConfig
 	get(item: 'queryMediaInfo'): boolean;
 	get(item: 'outputStylePath'): string | null;
 	get(item: 'disableRelativeTimestamps'): boolean;
+	get(item: 'showHeader'): boolean;
 	get(item: 'propertyRows'): string[];
 }
 

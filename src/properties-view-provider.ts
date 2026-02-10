@@ -122,6 +122,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 
 	const defaultStylePath = join(__dirname, '../styles/default.css');
 	const stylePath = Config.section.get('outputStylePath');
+	const showHeader = Config.section.get('showHeader');
 	const style = (await promisify(fs.readFile)(stylePath ? stylePath : defaultStylePath))
 		.toString();
 
@@ -134,6 +135,18 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 			<title>Document</title>
 			<style>
 				${raw(style)}
+				thead.sr-only
+				{
+					position: absolute;
+					width: 1px;
+					height: 1px;
+					padding: 0;
+					margin: -1px;
+					overflow: hidden;
+					white-space: nowrap;
+					border: 0;
+					clip-path: inset(50%);
+				}
 			</style>
 			<script>
 			(() =>
@@ -180,7 +193,7 @@ export async function provideViewHtml(view: 'command' | 'static', uri: Uri)
 		</head>
 		<body>
 			<table>
-				<thead>
+				<thead class="${showHeader ? '' : 'sr-only'}">
 					<tr class="column-header-row">
 						<th class="column-header-cell">Property</th>
 						<th class="column-header-cell">Value</th>

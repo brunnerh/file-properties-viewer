@@ -4,6 +4,7 @@
 
 - Added:
   - Setting for hiding and reordering property rows (`propertyRows`).
+  - Setting for hiding the table header (`showHeader`).
 
 ## [1.2.0] - 2024-03-14
 

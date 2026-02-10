@@ -76,6 +76,11 @@
                     "default": false,
                     "description": "Turns off relative timestamp display."
                 },
+                "filePropertiesViewer.showHeader": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Controls whether the table header row is shown."
+                },
                 "filePropertiesViewer.propertyRows": {
                     "type": "array",
                     "items": {

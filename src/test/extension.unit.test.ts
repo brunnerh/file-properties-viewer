@@ -21,6 +21,7 @@ const configValues: Record<string, unknown> = {
 	queryMediaInfo: false,
 	outputStylePath: null,
 	disableRelativeTimestamps: false,
+	showHeader: true,
 	propertyRows: defaultRows,
 };
 
@@ -104,6 +105,17 @@ describe('Extension Unit Tests', () =>
 	{
 		configValues.propertyRows = [...defaultRows];
 		configValues.queryMediaInfo = false;
+		configValues.showHeader = true;
+	});
+
+	test('can hide header visually while keeping it in markup', async () =>
+	{
+		configValues.showHeader = false;
+		const html = await render(file100);
+
+		expect(html).toContain('<thead class="sr-only">');
+		expect(html).toContain('>Property<');
+		expect(html).toContain('>Value<');
 	});
 
 	test('check HTML size strings', async () =>

@@ -35,6 +35,7 @@ This extension has the following settings (`filePropertiesViewer.<setting>`):
 - `sizeMode`: Whether to show file sizes in kibi (factor 1024) or kilo (factor 1000).
 - `dateTimeFormat`: Sets a custom date/time format for the timestamps.
 - `disableRelativeTimestamps`: Turns off relative timestamp display. 
+- `showHeader`: Controls whether the table header row is shown.
 - `queryMediaInfo`: Whether media information via mediainfo should be requested.
 - `propertyRows`: Configures which top-level property rows are shown and in which order.
 - `outputStylePath`: Sets a path to a CSS file used for styling the output table.  

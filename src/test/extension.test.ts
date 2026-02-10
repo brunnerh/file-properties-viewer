@@ -77,4 +77,23 @@ suite('Extension Integration Tests', () =>
 			await config.update('propertyRows', undefined, vscode.ConfigurationTarget.Global);
 		}
 	});
+
+	test('Can hide table header visually while keeping it in output.', async () =>
+	{
+		const config = vscode.workspace.getConfiguration('filePropertiesViewer');
+
+		try
+		{
+			await config.update('showHeader', false, vscode.ConfigurationTarget.Global);
+			const html = await render(file100);
+
+			assert.equal(html.indexOf('<thead class="sr-only">') > -1, true, `Header should be visually hidden.\n${html}`);
+			assert.equal(html.indexOf('>Property<') > -1, true, `Property header text should remain in markup.\n${html}`);
+			assert.equal(html.indexOf('>Value<') > -1, true, `Value header text should remain in markup.\n${html}`);
+		}
+		finally
+		{
+			await config.update('showHeader', undefined, vscode.ConfigurationTarget.Global);
+		}
+	});
 });
