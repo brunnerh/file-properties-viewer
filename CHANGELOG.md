@@ -10,6 +10,9 @@
     On Unix-like systems: user and group\
     On Windows: owner\
     (Calls `stat` or `powershell` which can fail.)
+- Changed:
+  - Table header ("Property"/"Value") is hidden by default, re-enable via
+    `showHeader`.
 
 ## [1.2.0] - 2024-03-14
 

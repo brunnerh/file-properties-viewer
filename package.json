@@ -78,7 +78,7 @@
                 },
                 "filePropertiesViewer.showHeader": {
                     "type": "boolean",
-                    "default": true,
+                    "default": false,
                     "description": "Controls whether the table header row is shown."
                 },
                 "filePropertiesViewer.zebraStripes": {
