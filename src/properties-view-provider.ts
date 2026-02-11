@@ -504,8 +504,9 @@ export async function viewPropertiesCommand(uri?: Uri)
 
 	let updateCount = 0;
 	let disposed = false;
+	let pendingUpdates: PendingRowUpdate[] = [];
 
-	const updateView = async () =>
+	const renderView = async () =>
 	{
 		const currentUpdate = ++updateCount;
 
@@ -517,11 +518,8 @@ export async function viewPropertiesCommand(uri?: Uri)
 				return;
 
 			panel.webview.html = viewContent.html;
-			dispatchPendingRowUpdates(
-				panel.webview,
-				viewContent.pendingUpdates,
-				renderId => disposed == false && renderId == updateCount,
-			);
+			pendingUpdates = viewContent.pendingUpdates;
+			dispatchUpdates();
 		}
 		catch
 		{
@@ -530,19 +528,33 @@ export async function viewPropertiesCommand(uri?: Uri)
 		}
 	};
 
-	await updateView();
+	function dispatchUpdates()
+	{
+		dispatchPendingRowUpdates(
+			panel.webview,
+			pendingUpdates,
+			renderId => disposed == false && renderId == updateCount,
+		);
+	}
+
+	await renderView();
 
 	panel.webview.onDidReceiveMessage(onViewMessage);
 
 	const updateHandlers = [
-		vscode.workspace.onDidSaveTextDocument(async e =>
+		panel.onDidChangeViewState(() =>
+		{
+			if (panel.visible)
+				dispatchUpdates();
+		}),
+		vscode.workspace.onDidSaveTextDocument(e =>
 		{
 			if (e.uri.toString() == finalUri.toString())
-				updateView();
+				renderView();
 		}),
-		vscode.workspace.onDidChangeConfiguration(async () =>
+		vscode.workspace.onDidChangeConfiguration(() =>
 		{
-			updateView();
+			renderView();
 		}),
 	];
 
